@@ -3,7 +3,7 @@ library(tidyverse)
 library(readxl)
 library(dataRetrieval)
 library(sf)
-source('code/Theme+Settings.R')
+source('scripts/Theme+Settings.R')
 
 # Load GAGESII data set ---------------------------------------------------
 #Downloaded from: https://www.sciencebase.gov/catalog/item/631405bbd34e36012efa304a
@@ -58,7 +58,7 @@ nwis_dat_fil <- whatNWISdata(
   service = 'dv') 
 
 # Search gages and count NAs --------------------------------------
-start_year <- 1970
+start_year <- 1981
 end_year <- 2022
 start_date_sel <- paste0(start_year,'-10-01')
 end_date_sel <- paste0(end_year,'-09-30')
@@ -123,18 +123,28 @@ ggplot(data = gages_final) +
 min_na <- 5
 gages_to_check <- gages_final$site_no[gages_final$days_missing >= min_na]
 
-gages_missing <- readNWISdv(
-  siteNumbers = gages_to_check,
-  parameterCd = '00060',
-  startDate = start_date_sel, endDate = end_date_sel
-)
+gages_missing <- tibble()
+count <- 0
+for(gage in gages_to_check){
+  gage_q <- readNWISdv(
+    siteNumbers = gage,
+    parameterCd = '00060',
+    startDate = start_date_sel, endDate = end_date_sel
+  ) %>%
+    select(c(site_no, Date, X_00060_00003))
+  gages_missing <- rbind(gages_missing, gage_q)
+  rm(gage_q)
+  
+  count <- count + 1
+  print(paste0(count,'/',length(gages_to_check),' done!!'))
+}
 
-write_csv(gages_missing, file.path('data','out', 
+write_csv(gages_missing, file.path('data','out', 'gage_q', 'na_checks', 
                                    paste0('gages_',min_na,'naMin_',buffer_sel,'naMax_',start_year,'start.csv')))
-
 # Check missing data periods ----------------------------------------------
 
-gages_missing <- read_csv(file.path('data','out','gages_5naMin_1095naMax_1970start.csv')) %>%
+gages_missing <- read_csv(file.path('data','out','gage_q','na_checks',
+                                    paste0('gages_',min_na,'naMin_',buffer_sel,'naMax_',start_year,'start.csv'))) %>%
   select(site_no, date = Date, q = X_00060_00003) %>%
   pivot_wider(id_cols = date, names_from = site_no, values_from = q) %>%
   pivot_longer(!date, names_to = 'site_no', values_to = 'q') %>%
@@ -154,7 +164,5 @@ ggplot(data = gages_missing_fil) +
 
 
 # Save list of gage numbers -----------------------------------------------
-write_csv(select(gages_final,site_no), file.path('data', 'out', 'gages_final.csv'))
-
-
+write_csv(select(gages_final,site_no), file.path('data', 'out', paste0('gage_list_',start_year,'start.csv')))
 
