@@ -1,6 +1,7 @@
 # Load libraries and data --------------------------------------------
 library(tidyverse)
 library(trend)
+source(file.path('scripts','functions','Theme+Settings.R'))
 source(file.path('scripts','functions','read_gages.R'))
 source(file.path('scripts','functions','read_spatial.R'))
 source(file.path('scripts','functions','signature_functions.R'))
@@ -66,16 +67,22 @@ bfi_trends <- bfi_annual %>%
   group_by(site_no) %>%
   summarise(stat = mk.test(bfi)$estimates['S'],
             sig = mk.test(bfi)$p.value) %>%
-  mutate(sig_dir = factor(ifelse(sig < sig_level,stat/abs(stat),NA))) %>%
-  left_join(gage_info)
+  mutate(sig_dir = factor(ifelse(sig < sig_level,stat/abs(stat),'non'), levels = c('non', '1','-1'))) %>%
+  left_join(gage_info) %>%
+  filter(!is.na(sig_dir)) %>%
+  arrange((sig_dir))
 
 sum(!is.na(bfi_trends$sig_dir))
 sum(!is.na(bfi_trends$sig_dir))/nrow(bfi_trends)
 
-ggplot(data = bfi_trends, aes(x = dec_long_va, y = dec_lat_va)) +
+ggplot(data = arrange(bfi_trends, desc(is.na(sig_dir))), aes(x = dec_long_va, y = dec_lat_va)) +
   geom_sf(data = states, inherit.aes = FALSE) +
   geom_point(aes(color = sig_dir)) +
-  scale_color_manual(values = c('red', 'blue'))
+  scale_color_manual(values = c('grey50', 'blue', 'red'), name = 'Trend', labels = c('Not significant','Increasing', 'Decreasing')) +
+  ggtitle('Annual Baseflow Index') +
+  xlab('') +
+  ylab('')
+ggsave(file.path('figures','sig_maps','bfi.png'), width = 6, height = 3, units = 'in')
 
 
 

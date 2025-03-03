@@ -41,8 +41,12 @@ flash_trends <- flash_summary %>%
 sum(!is.na(flash_trends$sig_dir))
 sum(!is.na(flash_trends$sig_dir))/nrow(flash_trends)
 
-ggplot(data = flash_trends, aes(x = dec_long_va, y = dec_lat_va)) +
+ggplot(data = arrange(flash_trends, desc(is.na(sig_dir))), aes(x = dec_long_va, y = dec_lat_va)) +
   geom_sf(data = states, inherit.aes = FALSE) +
   geom_point(aes(color = sig_dir)) +
-  scale_color_manual(values = c('red', 'blue'))
+  scale_color_manual(values = c('red', 'blue'), name = 'Trend', labels = c('Decreasing','Increasing')) +
+  ggtitle('Annual Richard-Baker Flashiness Index') +
+  xlab('') +
+  ylab('')
+ggsave(file.path('figures','sig_maps','rb_flashiness.png'), width = 6, height = 3, units = 'in')
 

@@ -2,6 +2,7 @@
 library(tidyverse)
 source(file.path('scripts','functions','read_gages.R'))
 source(file.path('scripts','functions','read_spatial.R'))
+source(file.path('scripts','functions','Theme+Settings.R'))
 
 gage_info_1970 <- read_gage_info(folder = '1970_2022')
 gage_info_1981 <- read_gage_info(folder = '1981_2022')
@@ -18,7 +19,8 @@ ggplot(data = gage_info_1970, aes(x = dec_long_va, y = dec_lat_va)) +
 ggplot(data = gage_info_1981, aes(x = dec_long_va, y = dec_lat_va)) +
   geom_sf(data = states, inherit.aes = FALSE) +
   geom_point() +
-  ggtitle('1981 Set')
+  xlab('') +
+  ylab('')
 
 ggplot(data = gage_info_1981, aes(x = dec_long_va, y = dec_lat_va)) +
   geom_sf(data = states, inherit.aes = FALSE) +

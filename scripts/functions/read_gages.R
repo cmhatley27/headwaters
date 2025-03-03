@@ -1,6 +1,6 @@
 # Read in gages -------------------------------------------------------
 
-read_gages <- function(folder = '1970_2022', subset = FALSE, nsub = 10, 
+read_gages <- function(folder = '1981_2022', subset = FALSE, nsub = 10, 
                        set.seed = TRUE, seed = 52798){
   
   #find file path for every downloaded gage
@@ -24,7 +24,7 @@ read_gages <- function(folder = '1970_2022', subset = FALSE, nsub = 10,
   return(qs)
 }
 
-read_gage_info <- function(folder = '1970_2022', subset = FALSE, qs = NULL){
+read_gage_info <- function(folder = '1981_2022', subset = FALSE, qs = NULL){
   
   #find file path for gage info
   info_path <- tail(list.files(path = file.path('data', 'out', 'gage_q', folder), 
