@@ -1,14 +1,27 @@
-# Read in gages -------------------------------------------------------
+require(tidyverse)
+#read info for selected gages. Headwaters selected in script 2_subset_headwaters,
+#downstream gages and headwater-downstream connections selected in script 3_select_downstream_gages
+read_gage_info <- function(type = 'headwaters'){
+  #type = c('headwaters', 'downstream', 'connections)
+  files <- c('headwaters' = 'hw_gage_info.csv',
+             'downstream' = 'ds_gage_info.csv',
+             'connections' = 'hw_ds_connections.csv')
+  
+  info_path <- file.path('data', 'gages', files[names(files) == type])
 
-read_gages <- function(folder = '1981_2022', subset = FALSE, nsub = 10, 
+  gage_info <- read_csv(info_path)
+
+  return(gage_info)
+}
+
+
+#read gage discharge data, downloaded in script 4_download_q
+read_gages <- function(type = c('headwaters'), subset = FALSE, nsub = 10, 
                        set.seed = TRUE, seed = 52798){
-  
+  #type = c('headwaters', 'downstream')
   #find file path for every downloaded gage
-  q_paths <- list.files(path = file.path('data', 'out', 'gage_q', folder), 
+  q_paths <- list.files(path = file.path('data', 'gages', 'q', type), 
                         full.names = TRUE)
-  
-  #indicate that we want every file except for the last (gage info .csv)
-  gages_select <- seq(1,length(q_paths)-1)
   
   # #Optional - select just a subset of gages for faster testing
   if(subset == TRUE){
@@ -20,19 +33,7 @@ read_gages <- function(folder = '1981_2022', subset = FALSE, nsub = 10,
   }
 
   #pull in selected gages (will pull everything if the subsetting is not done)
-  qs <- map_df(q_paths[gages_select], read_csv, col_types = 'cDddd')
+  qs <- map_df(q_paths, read_csv, col_types = 'cDddd')
   return(qs)
 }
 
-read_gage_info <- function(folder = '1981_2022', subset = FALSE, qs = NULL){
-  
-  #find file path for gage info
-  info_path <- tail(list.files(path = file.path('data', 'out', 'gage_q', folder), 
-                        full.names = TRUE), 1)
-  
-  gage_info <- read_csv(info_path)
-  if(subset == TRUE){
-    gage_info <- filter(gage_info, site_no %in% unique(qs$site_no))
-  }
-  return(gage_info)
-}
