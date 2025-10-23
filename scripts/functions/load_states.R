@@ -3,5 +3,6 @@ require(sf)
 
 dir_states <- file.path('data','shapefiles','states','States_shapefile.shp')
 states <- st_read(dir_states) %>%
-  filter(State_Code != 'AK', State_Code != 'HI')
+  filter(State_Code != 'AK', State_Code != 'HI') %>%
+  st_transform(., 5070)
 rm(dir_states)

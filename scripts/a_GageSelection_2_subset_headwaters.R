@@ -4,15 +4,15 @@ source('./scripts/Theme+Settings.R')
 all_gages <- read_csv('./data/gagesii/all_gages_summary.csv')
 
 # Filter gagesii by selected criteria -------------------------------------
-save = F #save filtered gage list as csv? will overwrite previous one.
+save = T #save filtered gage list as csv? will overwrite previous one.
 
 ## Stream Order
-max_stream_order <- 3
+stream_orders_sel <- 1:3
 
 ## Data Availability (max number of missing values within selected period)
 start_year <- 1981
-end_year <- 2022
-max_nas <- 365*3
+end_year <- 2023
+max_nas <- 365*5
 #function to calculate number of NA values in selected period using the 'count_nu'
 #column from the NWIS gage info that gives the total number of observations
 #available for each gage.
@@ -32,7 +32,7 @@ max_dist_index <- 56 #ranges from 0 to 56
 
 # Apply Filters and Save
 fil_gages <- all_gages %>%
-  filter(order <= max_stream_order,
+  filter(order %in% stream_orders_sel,
          ymd(end_date) >= ymd(paste0(end_year,'-09-30')),
          ymd(begin_date) <= ymd(paste0(start_year,'-10-01')),
          days_missing <= max_nas,
@@ -45,16 +45,15 @@ if(save) write_csv(fil_gages, paste0('./data/gages/hw_gage_info.csv'))
 
 # map filtered gages ------------------------------------------------------
 library(sf)
-states <- st_read('./data/shapefiles/states/States_shapefile.shp') %>%
-  filter(State_Code != 'AK' & State_Code != 'HI')
-gages_sf <- read_csv('./data/gages/hw_gage_info.csv') %>%
-  st_as_sf(., coords = c('lon', 'lat'), crs = 4269)
+source('scripts/functions/load_states.R')
+gages_sf <- fil_gages %>%
+  st_as_sf(., coords = c('lon', 'lat'), crs = 4269) %>%
+  st_transform(5070)
 
 ggplot() +
   geom_sf(data = states) +
   geom_sf(data = gages_sf) +
   ggtitle(paste0('n = ',nrow(gages_sf),' filtered gages'))
-
 
 # Explore filter values ---------------------------------------------------
 # plots and stuff to help in selecting appropriate filter values

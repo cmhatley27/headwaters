@@ -1,9 +1,10 @@
 %% Loop through all gages and years
-files = ls(strcat("./data/gages/merged/","*.csv"));
-paths = strcat("./data/gages/merged/",files);
+files = ls(strcat("./data/gages/q/","*.csv"));
+q_paths = strcat("./data/gages/q/",files);
+clim_paths = strcat("./data/gages/climate/",files);
 
 start_year = 1982;
-end_year = 2022;
+end_year = 2023;
 years = start_year:end_year;
 
 %optional parameter tweaks
@@ -14,22 +15,25 @@ thresholds_high = [3 6 9]; % flow thresholds (as multiples of median) for calcul
 
 plot_results = false; % option to display plots. set to false unless working with a small number of sites/metrics
 
-window_size = 20; % number of years to include in moving window
+window_size = 3; % number of years to include in moving window
 
 for file = 1:length(files)
     %read gage data with gage number as string
-    gage_path = paths(file)
-    read_opts = detectImportOptions(gage_path);
+    q_path = q_paths(file)
+    read_opts = detectImportOptions(q_path);
     read_opts = setvartype(read_opts, "site_no", "string");
-    dat = readtable(gage_path,read_opts);
+    q_dat = readtable(q_path,read_opts);
+
+    clim_path = clim_paths(file);
+    read_opts = detectImportOptions(clim_path);
+    read_opts = setvartype(read_opts, "site_no", "string");
+    clim_dat = readtable(clim_path,read_opts);
+
+    dat = join(q_dat, clim_dat);
 
     %get gage number
     site = dat.site_no{1};
        
-    %prepare TOSSH inputs
-    % q = num2cell(dat.q,1);
-    % t = num2cell(dat.date,1);
-    
     %set custom parameters
     try
         % Overland flow
@@ -50,8 +54,9 @@ for file = 1:length(files)
     resultsCell = cell(numel(years)-window_size+1,1);
     
     %calculate basic signatures for each year
-    for year = 1:(length(years)-window_size+1)
-        dat_year = dat(ismember(dat.wateryear, years(year):years(year + window_size-1)),:);
+    for year = 1:(length(years)/window_size) %year = 1:(length(years)-window_size+1)
+        slice = years(((year-1)*window_size+1):(year*window_size));
+        dat_year = dat(ismember(dat.wateryear, slice),:); %dat_year = dat(ismember(dat.wateryear, years(year):years(year + window_size-1)),:);%
         q = num2cell(dat_year.q_norm,1);
         t = num2cell(dat_year.date,1);
         precip = num2cell(dat_year.precip,1);
@@ -96,28 +101,28 @@ for file = 1:length(files)
         end
     end
     results = vertcat(resultsCell{:});
-    results.site_no = repmat(site, (length(years)-window_size+1), 1);
-    results.wateryear = years(1:(length(years)-window_size+1)).';
+    results.site_no = repmat(site, (length(years)/window_size), 1); %repmat(site, (length(years)-window_size+1), 1); %
+    results.wateryear = years((((1:length(years)/window_size)-1)*window_size)+1).'; %years(1:(length(years)-window_size+1)).'; %
     
-    writetable(results, strcat("./data/gages/metrics/tossh/window_",num2str(window_size),"/",site,".csv"))
+    writetable(results, strcat("./data/gages/metrics/loose/fixex_",num2str(window_size),"/",site,".csv"))
     disp(strcat("gage ",num2str(file),"/",num2str(length(files))," done!"))
 end
 
 %% merge
-% window_size = 3;
-files = ls(strcat("./data/gages/metrics/tossh/window_",num2str(window_size),"/*.csv"));
-paths = strcat("./data/gages/metrics/tossh/window_",num2str(window_size),"/",files);
+%window_size = 3;
+files = ls(strcat("./data/gages/metrics/loose/fixed_",num2str(window_size),"/*.csv"));
+paths = strcat("./data/gages/metrics/loose/fixed_",num2str(window_size),"/",files);
 read_opts = detectImportOptions(paths(1));
 read_opts = setvartype(read_opts,"site_no","string");
 read_opts = setvartype(read_opts,strcmp(read_opts.VariableTypes,'char'),"string");
 
-all_dat = table('Size',[length(files)*(length(years)-window_size+1) length(read_opts.VariableNames)],...
+all_dat = table('Size',[length(files)*(length(years)/window_size) length(read_opts.VariableNames)],... %table('Size',[length(files)*(length(years)-window_size+1) length(read_opts.VariableNames)],...%
     'VariableTypes',read_opts.VariableTypes,...
     'VariableNames',read_opts.VariableNames);
 for file = 1:length(files)
     gage_path = paths(file)
     dat = readtable(gage_path,read_opts);
-    all_dat((file-1)*(length(years)-window_size+1)+1:(file)*(length(years)-window_size+1),:) = dat;
+    all_dat((file-1)*(length(years)/window_size)+1:file*(length(years)/window_size),:) = dat; %all_dat((file-1)*(length(years)-window_size+1)+1:(file)*(length(years)-window_size+1),:) = dat;%
 end
 
-writetable(all_dat, strcat("./data/gages/metrics/metrics_window",num2str(window_size),".csv"))
+writetable(all_dat, strcat("./data/gages/metrics/merged/metrics_fixed",num2str(window_size),".csv"))

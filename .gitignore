@@ -3,7 +3,10 @@
 .RData
 .Ruserdata
 data/
-figures/
 docs/
 zipper2021/
 scripts/matlb_reference/
+scripts/connections_v2/*.csv
+*.png
+*.svg
+*.tif

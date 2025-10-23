@@ -32,7 +32,7 @@ gagesii <- select(basin_id, id = STAID, name = STANAME, state = STATE, drainage_
                    flow_years_1900_2009 = FLOWYRS_1900_2009, flow_years_1950_2009 = FLOWYRS_1950_2009, flow_years_1990_2009 = FLOWYRS_1990_2009,
                    7:116)) %>%
   left_join(select(hydromod, id = STAID, dam_count = NDAMS_2009, dam_storage = STOR_NID_2009)) %>%
-  left_join(select(climate, id = STAID, precip = PPTAVG_BASIN)) %>%
+  left_join(select(climate, id = STAID, precip = PPTAVG_BASIN, temp = T_AVG_BASIN, pet = PET)) %>%
   #convert precip to mm/year
   mutate(precip = precip*10,
          storage_precip_ratio = dam_storage/precip)

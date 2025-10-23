@@ -1,11 +1,11 @@
 # Load libraries -------------------------------------------------
 library(tidyverse)
 library(dataRetrieval)
-source('scripts/functions/read_gages.R')
+source('scripts/functions/utilities.R')
 
 # Download selected gages and save -----------------
 start_year <- 1981
-end_year <- 2022
+end_year <- 2023
 start_date_sel <- paste0(start_year,'-10-01')
 end_date_sel <- paste0(end_year,'-09-30')
 

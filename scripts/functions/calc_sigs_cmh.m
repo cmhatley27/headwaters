@@ -62,7 +62,7 @@ addParameter(ip, 'plot_results', false, @islogical) % whether to plot results
 
 %optional freq/duration threshold parameters
 addParameter(ip, 'thresholds_high', [3 6 9], @isnumeric) % multiples of median to use as flow thresholds
-addParameter(ip, 'thresholds_low', [3 6 9], @isnumeric) % multiples of median to use as flow thresholds
+addParameter(ip, 'thresholds_low', [0.75 0.5 0.25], @isnumeric) % multiples of median to use as flow thresholds
 
 % Recession signature parameter
 addParameter(ip, 'recession_length', 5, @isnumeric) % length of recessions to find (days)
@@ -83,6 +83,7 @@ plot_results = ip.Results.plot_results;
 
 % Freq/duration threshold parameters
 thresholds_high = ip.Results.thresholds_high;
+thresholds_low = ip.Results.thresholds_low;
 
 % Recession signature parameter
 recession_length = ip.Results.recession_length;
@@ -103,27 +104,41 @@ Q_mean_monthly = NaN(size(Q_mat,1),12);
 Q_mean_monthly_error_str = strings(size(Q_mat,1),1);
 Q95 = NaN(size(Q_mat,1),1);
 Q95_error_str = strings(size(Q_mat,1),1);
+Q90 = NaN(size(Q_mat,1),1);
+Q90_error_str = strings(size(Q_mat,1),1);
 Q10 = NaN(size(Q_mat,1),1);
 Q10_error_str = strings(size(Q_mat,1),1);
+Q5 = NaN(size(Q_mat,1),1);
+Q5_error_str = strings(size(Q_mat,1),1);
 Q95_minus_Q10 = NaN(size(Q_mat,1),1);
 TotalRR = NaN(size(Q_mat,1),1);
 TotalRR_error_str = strings(size(Q_mat,1),1);
 BFI = NaN(size(Q_mat,1),1);
 BFI_error_str = strings(size(Q_mat,1),1);
+% qp_elasticity = NaN(size(Q_mat,1),1);
+% qp_elasticity_error_str = strings(size(Q_mat,1),1);
 
 % initialise arrays - Frequency
 Q_frequency_high = NaN(size(Q_mat,1),length(thresholds_high));
 Q_frequency_high_error_str = strings(size(Q_mat,1),1);
+Q_frequency_low = NaN(size(Q_mat,1),length(thresholds_low));
+Q_frequency_low_error_str = strings(size(Q_mat,1),1);
 Q_frequency_noflow = NaN(size(Q_mat,1),1);
 Q_frequency_noflow_error_str = strings(size(Q_mat,1),1);
 
 % initialize arrays - Duration
 Q_totalduration_high = NaN(size(Q_mat,1),length(thresholds_high));
 Q_totalduration_high_error_str = strings(size(Q_mat,1),1);
+Q_totalduration_low = NaN(size(Q_mat,1),length(thresholds_low));
+Q_totalduration_low_error_str = strings(size(Q_mat,1),1);
 Q_totalduration_noflow = NaN(size(Q_mat,1),1);
 Q_totalduration_noflow_error_str = strings(size(Q_mat,1),1);
 Q_meanduration_high = NaN(size(Q_mat,1),length(thresholds_high));
 Q_meanduration_high_error_str = strings(size(Q_mat,1),1);
+Q_meanduration_low = NaN(size(Q_mat,1),length(thresholds_low));
+Q_meanduration_low_error_str = strings(size(Q_mat,1),1);
+Q_meanduration_noflow = NaN(size(Q_mat,1),1);
+Q_meanduration_noflow_error_str = strings(size(Q_mat,1),1);
 
 % initialize arrays - Timing
 HFD_mean = NaN(size(Q_mat,1),1);
@@ -163,20 +178,29 @@ for i = 1:size(Q_mat,1)
     % magnitude
     [Q_mean(i),~,Q_mean_error_str(i)] = sig_Q_mean(Q_mat{i},t_mat{i});
     [Q_mean_monthly(i,:),~,Q_mean_monthly_error_str(i)] = sig_Q_mean_monthly(Q_mat{i},t_mat{i},1:12);
+    [Q90(i),~,Q90_error_str(i)] = sig_x_percentile(Q_mat{i},t_mat{i},90);
     [Q95(i),~,Q95_error_str(i)] = sig_x_percentile(Q_mat{i},t_mat{i},95);
     [Q10(i),~,Q10_error_str(i)] = sig_x_percentile(Q_mat{i},t_mat{i},10);
+    [Q5(i),~,Q5_error_str(i)] = sig_x_percentile(Q_mat{i},t_mat{i},5);
     [Q95_minus_Q10(i)] = Q95(i) - Q10(i);
     [TotalRR(i),~,TotalRR_error_str(i)] = sig_TotalRR(Q_mat{i},t_mat{i},P_mat{i});
     [BFI(i),~,BFI_error_str(i)] = sig_BFI(Q_mat{i},t_mat{i});
-
+    % [qp_elasticity(i),~,qp_elasticity_error_str(i)] = sig_QP_elasticity(Q_mat{i},t_mat{i},P_mat{i});
+    
+    thresholds_high = thresholds_high*median(Q_mat{i}, 'omitnan');
+    thresholds_low = thresholds_low*median(Q_mat{i}, 'omitnan');
     % frequency
     [Q_frequency_high(i,:),~,Q_frequency_high_error_str(i)] = sig_x_Q_frequency_cmh(Q_mat{i},t_mat{i},'custom_high','threshold',thresholds_high);
+    [Q_frequency_low(i,:),~,Q_frequency_low_error_str(i)] = sig_x_Q_frequency_cmh(Q_mat{i},t_mat{i},'custom_low','threshold',thresholds_low);
     [Q_frequency_noflow(i),~,Q_frequency_noflow_error_str(i)] = sig_x_Q_frequency_cmh(Q_mat{i},t_mat{i},'no');
 
     % duration
     [Q_totalduration_high(i,:),~,Q_totalduration_high_error_str(i)] = sig_x_Q_totalduration(Q_mat{i},t_mat{i},'custom_high','threshold',thresholds_high);
+    [Q_totalduration_low(i,:),~,Q_totalduration_low_error_str(i)] = sig_x_Q_totalduration(Q_mat{i},t_mat{i},'custom_low','threshold',thresholds_low);
     [Q_totalduration_noflow(i),~,Q_totalduration_noflow_error_str(i)] = sig_x_Q_totalduration(Q_mat{i},t_mat{i},'no');
     [Q_meanduration_high(i,:),~,Q_meanduration_high_error_str(i)] = sig_x_Q_meanduration(Q_mat{i},t_mat{i},'custom_high','threshold',thresholds_high);
+    [Q_meanduration_low(i,:),~,Q_meanduration_low_error_str(i)] = sig_x_Q_meanduration(Q_mat{i},t_mat{i},'custom_low','threshold',thresholds_low);
+    [Q_meanduration_noflow(i,:),~,Q_meanduration_noflow_error_str(i)] = sig_x_Q_meanduration(Q_mat{i},t_mat{i},'no');
 
     % timing
     [HFD_mean(i),~,HFD_mean_error_str(i)] = sig_HFD_mean(Q_mat{i},t_mat{i});
@@ -217,27 +241,42 @@ results.Q_mean = Q_mean;
 results.Q_mean_error_str = Q_mean_error_str;
 results.Q_mean_monthly = Q_mean_monthly;
 results.Q_mean_monthly_error_str = Q_mean_monthly_error_str;
+results.Q90 = Q90;
+results.Q90_error_str = Q90_error_str;
 results.Q95 = Q95;
 results.Q95_error_str = Q95_error_str;
 results.Q10 = Q10;
 results.Q10_error_str = Q10_error_str;
+results.Q5 = Q5;
+results.Q5_error_str = Q5_error_str;
 results.Q95_minus_Q10 = Q95_minus_Q10;
 results.TotalRR = TotalRR;
 results.TotalRR_error_str = TotalRR_error_str;
 results.BFI = BFI;
 results.BFI_error_str = BFI_error_str;
+% results.qp_elasticity = qp_elasticity;
+% results.qp_elasticity_error_str = qp_elasticity_error_str;
 
 results.Q_frequency_high = Q_frequency_high;
 results.Q_frequency_high_error_str = Q_frequency_high_error_str;
+results.Q_frequency_low = Q_frequency_low;
+results.Q_frequency_low_error_str = Q_frequency_low_error_str;
 results.Q_frequency_noflow = Q_frequency_noflow;
 results.Q_frequency_noflow_error_str = Q_frequency_noflow_error_str;
 
 results.Q_totalduration_high = Q_totalduration_high;
 results.Q_totalduration_high_error_str = Q_totalduration_high_error_str;
-results.Q_meanduration_high = Q_meanduration_high;
-results.Q_meanduration_high_error_str = Q_meanduration_high_error_str;
+results.Q_totalduration_low = Q_totalduration_low;
+results.Q_totalduration_low_error_str = Q_totalduration_low_error_str;
 results.Q_totalduration_noflow = Q_totalduration_noflow;
 results.Q_totalduration_noflow_error_str = Q_totalduration_noflow_error_str;
+results.Q_meanduration_high = Q_meanduration_high;
+results.Q_meanduration_high_error_str = Q_meanduration_high_error_str;
+results.Q_meanduration_low = Q_meanduration_low;
+results.Q_meanduration_low_error_str = Q_meanduration_low_error_str;
+results.Q_meanduration_high = Q_meanduration_high;
+results.Q_meanduration_noflow_error_str = Q_meanduration_noflow_error_str;
+
 
 results.HFD_mean = HFD_mean;
 results.HFD_mean_error_str = HFD_mean_error_str;

@@ -4,13 +4,17 @@ source('./scripts/Theme+Settings.R')
 
 
 # cor plot for raw metrics ------------------------------------------------
-dat <- read_csv('./data/metrics/all_metrics.csv')
+dat <- read_csv('./data/gages/metrics/metrics_window3.csv')
 dat_subset <- select(dat, where(is.numeric)) %>%
-  select(!c(contains('monthly'), contains('high_1'), contains('high_2'))) %>%
-  select(!wateryear)
+  select(!c(contains('monthly'), contains('high_1'), contains('high_2'), 'Q95_minus_Q10')) %>%
+  select(!wateryear) %>%
+  select(Q_mean, Q95, Q10, TotalRR, Q_frequency_high_3, Q_frequency_noflow,
+         Q_totalduration_high_3, Q_meanduration_high_3, Q_totalduration_noflow,
+         HFD_mean, HFI_mean, peakQ_timing, BFI, FlashinessIndex, RLD, FDC_slope,
+         BaseflowRecessionK, Recession_a_Seasonality)
 
 cor_mat <- cor(dat_subset, use = 'pairwise.complete', method = 'spearman')
-corrplot(cor_mat, method = 'number')
+corrplot(cor_mat, method = 'circle')
 
 
 # corplot for all metrics for subsetting ----------------------------------

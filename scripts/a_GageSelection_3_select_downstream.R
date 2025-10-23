@@ -1,13 +1,12 @@
 # load libraries and data -------------------------------------------------
 library(tidyverse)
 source('scripts/Theme+Settings.R')
-source('scripts/functions/read_gages.R')
-source('scripts/functions/read_spatial.R')
-source('scripts/functions/utility_functions.R')
+source('scripts/functions/load_states.R')
+source('scripts/functions/utilities.R')
 
 all_gages <- read_csv('./data/gagesii/all_gages_summary.csv')
 hw_gage_info <- read_gage_info()
-
+hw_gage_info <- fil_gages
 
 # Load in gagesii headwaters/downstream connections -----------------------
 # using John Hammond's table
@@ -43,12 +42,12 @@ connections <- read_csv('data/gagesii/all_gagesii_connections.csv') %>%
 #headwater and downstream site so they are still of somewhat comparable size.
 save = T #save filtered gage and connections list as csv? Will overwrite previous
 
-min_drainage_ratio <- 0.1
+min_drainage_ratio <- 0.05
 
 ## Data Availability (max number of missing values within selected period)
 start_year <- 1981
-end_year <- 2022
-max_nas <- 365*3
+end_year <- 2023
+max_nas <- 365*5
 #function to calculate number of NA values in selected period using the 'count_nu'
 #column from the NWIS gage info that gives the total number of observations
 #available for each gage.
@@ -75,11 +74,15 @@ fil_gages_ds <- all_gages %>%
          days_missing <= max_nas,
          storage_precip_ratio <= max_storage_ratio,
          dist_index <= max_dist_index)
+
 #apply additional filter to connections to get ones where downstream gages are in
 #our new downstream set
-hw_ds_connections <- filter(fil_connections, downstream_id %in% fil_gages_ds$site_no)
+hw_ds_connections <- filter(fil_connections, downstream_id %in% fil_gages_ds$site_no) %>%
+  left_join(., select(all_gages, site_no, hw_order = order), by = join_by(headwater_id == site_no)) %>%
+  left_join(., select(all_gages, site_no, ds_order = order), by = join_by(downstream_id == site_no)) %>%
+  mutate(connection_id = 1:nrow(.))
 
-print(paste0('Filter connections contain ',
+print(paste0('Filtered connections contain ',
              length(unique(hw_ds_connections$headwater_id)),' unique headwater gages',
              ' connected to ',nrow(fil_gages_ds),' unique downstream gages'))
 
@@ -89,13 +92,13 @@ if(save) write_csv(hw_ds_connections, paste0('./data/gages/hw_ds_connections.csv
 
 # map filtered gages ------------------------------------------------------
 library(sf)
-states <- st_read('./data/shapefiles/states/States_shapefile.shp') %>%
-  filter(State_Code != 'AK' & State_Code != 'HI')
-hw_gages_sf <- read_csv('./data/gages/hw_gage_info.csv') %>%
-  st_as_sf(., coords = c('lon', 'lat'), crs = 4269)
-ds_gages_sf <- read_csv('./data/gages/ds_gage_info.csv') %>%
-  st_as_sf(., coords = c('lon', 'lat'), crs = 4269)
-hw_ds_connections <- read_csv('./data/gages/hw_ds_connections.csv')
+hw_gages_sf <- hw_gage_info %>% #read_csv('./data/gages/hw_gage_info.csv') %>%
+  st_as_sf(., coords = c('lon', 'lat'), crs = 4269) %>%
+  st_transform(5070)
+ds_gages_sf <- fil_gages_ds %>%
+  st_as_sf(., coords = c('lon', 'lat'), crs = 4269) %>%
+  st_transform(5070)
+
 
 ggplot() +
   geom_sf(data = states) +
