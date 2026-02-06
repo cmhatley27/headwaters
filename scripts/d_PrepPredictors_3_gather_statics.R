@@ -1,10 +1,10 @@
 # load libraries and data -------------------------------------------------
 library(tidyverse)
 source('scripts/functions/utilities.R')
+source('scripts/functions/load_gages.R')
 
-hw_gage_info <- read_gage_info(type = 'headwaters')
-ds_gage_info <- read_gage_info(type = 'downstream')
-gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no))
+gage_list <- all_gage_info$site_no
+
 
 # get gagesii static predictors --------------------------------------------
 library(readxl)
@@ -54,6 +54,18 @@ climate_means <- climate_dat %>%
   group_by(site_no) %>%
   summarise(across(c(precip, temp, pet), mean, .names = '{.col}_mean'))
 
+si_means <- climate_dat %>%
+  mutate(wateryear = ifelse(month(date) >= 10, year(date) + 1, year(date)),
+         month = month(date)) %>%
+  group_by(site_no, wateryear, month) %>%
+  summarise(precip = sum(precip, na.rm = T)) %>%
+  group_by(site_no, wateryear) %>%
+  mutate(annual_precip = sum(precip),
+         si_component = abs(precip-annual_precip/12)) %>%
+  summarise(si = sum(si_component)/sum(precip)) %>%
+  group_by(site_no) %>%
+  summarise(si_mean = mean(si))
+
 q_dat <- gather_loose('data/gages/q/')
 q_means <- q_dat %>%
   mutate(wateryear = ifelse(month(date) >= 10, year(date)+1, year(date))) %>%
@@ -63,10 +75,10 @@ q_means <- q_dat %>%
   summarise(q_norm_mean = mean(q_norm))
 
 hydro_means <- left_join(q_means, climate_means) %>%
+  left_join(si_means) %>%
   pivot_longer(!site_no, names_to = 'var', values_to = 'val')
 
 write_csv(hydro_means, 'data/gages/predictors/statics/hydro_means.csv')
-
 
 # water use mean ----------------------------------------------------------
 wuse_mean <- read_delim('data/gagesii/Dataset10_WaterUse/WaterUse_1985-2010.txt') %>%
@@ -81,11 +93,18 @@ wuse_mean <- read_delim('data/gagesii/Dataset10_WaterUse/WaterUse_1985-2010.txt'
 
 write_csv(wuse_mean, 'data/gages/predictors/statics/wuse_mean.csv')
 
+
+# tile drainage -----------------------------------------------------------
+tile_pct <- read_csv('data/gages/tile_drainage/tile_pct.csv') %>%
+  pivot_longer(!site_no, names_to = 'var', values_to = 'val')
+write_csv(tile_pct, 'data/gages/predictors/statics/tile_pct.csv')
+
 # merge statics -----------------------------------------------------------
 gagesii <- read_csv('data/gages/predictors/statics/gagesii_statics.csv')
 geol_age <- read_csv('data/gages/predictors/statics/geol_age.csv')
 hydro_means <- read_csv('data/gages/predictors/statics/hydro_means.csv')
 wuse_mean <- read_csv('data/gages/predictors/statics/wuse_mean.csv')
+tile_pct <- read_csv('data/gages/predictors/statics/tile_pct.csv')
 
-merged <- rbind(gagesii, geol_age, hydro_means, wuse_mean)
+merged <- rbind(gagesii, geol_age, hydro_means, wuse_mean, tile_pct)
 write_csv(merged, 'data/gages/predictors/pred_statics.csv')

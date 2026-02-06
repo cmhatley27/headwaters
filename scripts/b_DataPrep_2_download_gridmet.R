@@ -7,7 +7,8 @@ source('./scripts/functions/utilities.R')
 
 hw_gage_info <- read_gage_info(type = 'headwaters')
 ds_gage_info <- read_gage_info(type = 'downstream')
-gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no))
+ds_match_gage_info <- read_gage_info('downstream_matched')
+gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no, ds_match_gage_info$site_no))
 
 
 # load watershed boundaries -----------------------------------------------
@@ -63,3 +64,32 @@ for(i in 1:nrow(boundaries)){
   
   print(paste0('watershed ',i,'/',nrow(boundaries),' done!!!!!'))
 }
+
+
+# fix some weird outliers -------------------------------------------------
+#03079000 temp
+bad_temp <- read_csv('./data/gages/climate/03079000.csv') %>%
+  mutate(dtemp = temp-lag(temp))
+#at 1999-07-02 all temperatures suddenly drop by 32 degrees
+shift_date <- bad_temp$date[which.min(bad_temp$dtemp)]
+before_mean <- mean(bad_temp$temp[bad_temp$date < shift_date])
+after_mean <- mean(bad_temp$temp[bad_temp$date >= shift_date])
+#fix by shifting the bad temp up and rescaling
+temp_fix <- bad_temp %>%
+  mutate(new_temp = ifelse(date >= shift_date, (temp-after_mean)*9/5+before_mean,temp))
+ggplot(temp_fix, aes(x = date, y = temp)) +
+  geom_point(color = 'red') +
+  geom_point(aes(y = new_temp))
+temp_fix_save <- select(temp_fix, date, site_no, precip, pet, temp = new_temp)
+write_csv(temp_fix_save, './data/gages/climate/03079000.csv')
+
+#03360500 and 08202700 pet
+#These just go to 0 for some reason midway through the period so going to 
+#set the whole series to NA so that they're not used later on
+bad_pet1 <- read_csv('./data/gages/climate/03360500.csv') %>%
+  mutate(pet = NA)
+write_csv(bad_pet1, './data/gages/climate/03360500.csv')
+bad_pet2 <- read_csv('./data/gages/climate/08202700.csv') %>%
+  mutate(pet = NA)
+write_csv(bad_pet2, './data/gages/climate/08202700.csv')
+

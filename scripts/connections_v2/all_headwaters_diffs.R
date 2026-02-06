@@ -11,19 +11,19 @@ connections <- read_gage_info('connections')
 connections12 <- filter(connections, hw_order %in% 1:2)
 
 # load differences output -------------------------------------------------
-hw_diffs <- read_csv('scripts/connections_v2/order12_hw_diffs_set1.csv')
-hw_diffs_info <- read_csv('scripts/connections_v2/order12_hw_diffs_set1_info.csv')
+hw_diffs <- read_csv('scripts/connections_v2/order123_hw_diffs_set1.csv')
+hw_diffs_info <- read_csv('scripts/connections_v2/order123_hw_diffs_set1_info.csv')
 
 
 # plot a point ------------------------------------------------------------
 plot_gages_diff(hw_diffs, hw12_gage_info$site_no[126])
 
 # get gages in the same huc8 ----------------------------------------------
-huc8_matches <- get_huc8_matches(hw12_gage_info$site_no)
+huc8_matches <- get_huc8_matches(hw_gage_info$site_no)
 
 # filter differences to downstream gages in the same HUC8 -----------------
 hw_diffs_fil <- hw_diffs %>%
-  filter(target_order > 2 & drainage_ratio < 1) %>%
+  filter(drainage_ratio < 1) %>%
   group_by(goi_id) %>%
   mutate(ds_ranking = rank(diffmetric)) %>%
   left_join(., huc8_matches) %>%
@@ -57,9 +57,9 @@ gages2_loc <- read_csv('data/gagesii/spreadsheets-in-csv-format/conterm_basinid.
   st_as_sf(coords = c('lon', 'lat'), crs = 4269) %>% st_transform(5070)
 
 new_connections <- hw_diffs_fil %>%
-  filter(diffmetric <= cn_median | nhd_connection == T)
+  filter(diffmetric <= cn_mean | nhd_connection == T)
 
-old_connections_hw <- filter(connections12, ds_order > 2 & drainage_ratio < 1) %>%
+old_connections_hw <- filter(connections, drainage_ratio < 1) %>%
   select(site_no = headwater_id) %>%
   left_join(gages2_loc)
 new_connections_hw <- data.frame(site_no = unique(new_connections$goi_id)) %>%

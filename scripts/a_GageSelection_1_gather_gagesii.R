@@ -23,16 +23,21 @@ basin_class <- read_excel(dir_gagesii, 'Bas_Classif')
 hydromod <- read_excel(dir_gagesii, sheet = 'HydroMod_Dams')
 #climate
 climate <- read_excel(dir_gagesii, sheet = 'Climate')
+#regions
+regions <- read_excel(dir_gagesii, sheet = 'Regions')
 
 #Combine all and rename columns
 gagesii <- select(basin_id, id = STAID, name = STANAME, state = STATE, drainage_area = DRAIN_SQKM, lat = LAT_GAGE, lon = LNG_GAGE) %>%
-  left_join(select(basin_class, id = STAID, ref = CLASS, region = AGGECOREGION, dist_index = HYDRO_DISTURB_INDX, wr_comments = WR_REPORT_REMARKS, screen_comments = SCREENING_COMMENTS)) %>%
+  left_join(select(basin_class, id = STAID, ref = CLASS, aggregion = AGGECOREGION, dist_index = HYDRO_DISTURB_INDX, wr_comments = WR_REPORT_REMARKS, screen_comments = SCREENING_COMMENTS)) %>%
   left_join(select(hydro, id = STAID, order = STRAHLER_MAX)) %>%
   left_join(select(flow_rec, id = STAID, active_09 = ACTIVE09, 
                    flow_years_1900_2009 = FLOWYRS_1900_2009, flow_years_1950_2009 = FLOWYRS_1950_2009, flow_years_1990_2009 = FLOWYRS_1990_2009,
                    7:116)) %>%
   left_join(select(hydromod, id = STAID, dam_count = NDAMS_2009, dam_storage = STOR_NID_2009)) %>%
   left_join(select(climate, id = STAID, precip = PPTAVG_BASIN, temp = T_AVG_BASIN, pet = PET)) %>%
+  left_join(select(regions, id = STAID, region2 = ECO2_BAS_DOM, region3 = ECO3_BAS_DOM)) %>%
+  mutate(region1 = floor(region2)) %>%
+  # mutate(region1 = )
   #convert precip to mm/year
   mutate(precip = precip*10,
          storage_precip_ratio = dam_storage/precip)
@@ -67,7 +72,7 @@ nwis_gagesii <- select(nwis_gagesii, !all_of(extraneous_cols)) %>%
 
 # join gagesii info to nwis info and save -------------------------------------------
 all_gages <- left_join(nwis_gagesii, 
-                       select(gagesii, c(site_no = id, ref, order, drainage_area, 
+                       select(gagesii, c(site_no = id, ref, order, drainage_area, aggregion, region1, region2, region3,
                                          precip, dam_count, dam_storage, storage_precip_ratio,
                                          dist_index, wr_comments, screen_comments)))
 write_csv(all_gages, './data/gagesii/all_gages_summary.csv')

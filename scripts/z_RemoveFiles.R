@@ -1,8 +1,9 @@
 source('scripts/functions/utilities.R')
 
 hw_gages <- read_gage_info()
-ds_gages <- read_gage_info('downstream')
-all_gages <- unique(c(hw_gages$site_no, ds_gages$site_no))
+ds_connected_gages <- read_gage_info('downstream')
+ds_matched_gages <- read_gage_info('downstream_matched')
+all_gages <- unique(c(hw_gages$site_no, ds_connected_gages$site_no, ds_matched_gages$site_no))
 
 remove_paths <- c('data/gages/q/',
                   'data/gages/climate/',

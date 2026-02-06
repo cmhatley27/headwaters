@@ -7,7 +7,8 @@ source('scripts/functions/utilities.R')
 # load watershed boundaries -----------------------------------------------
 hw_gage_info <- read_gage_info(type = 'headwaters')
 ds_gage_info <- read_gage_info(type = 'downstream')
-gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no))
+ds_match_gage_info <- read_gage_info('downstream_matched')
+gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no, ds_match_gage_info$site_no))
 
 boundary_files <- list.files('./data/gagesii/boundaries-shapefiles-by-aggeco/',
                              pattern = '*.shp', full.names = T)

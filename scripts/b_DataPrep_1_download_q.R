@@ -11,7 +11,8 @@ end_date_sel <- paste0(end_year,'-09-30')
 
 hw_gage_info <- read_gage_info(type = 'headwaters')
 ds_gage_info <- read_gage_info(type = 'downstream')
-gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no))
+ds_match_gage_info <- read_gage_info('downstream_matched')
+gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no, ds_match_gage_info$site_no))
 
 save_path <- file.path('data', 'gages', 'q')
 dir.create(save_path)
@@ -27,6 +28,8 @@ for(gage in gage_list){
   #get drainage area for Q normalization
   if(gage %in% hw_gage_info$site_no) da <- hw_gage_info$drainage_area[hw_gage_info$site_no == gage]
   if(gage %in% ds_gage_info$site_no) da <- ds_gage_info$drainage_area[ds_gage_info$site_no == gage]
+  if(gage %in% ds_match_gage_info$site_no) da <- ds_match_gage_info$drainage_area[ds_match_gage_info$site_no == gage]
+  
   da <- da*1e6
   
   gage_q <- readNWISdv(

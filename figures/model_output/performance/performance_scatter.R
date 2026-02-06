@@ -2,12 +2,12 @@
 library(tidyverse)
 source('scripts/Theme+Settings.R')
 
-model_name <- 'hw_order2_senval'
+model_name <- 'all_annual'
 fig_dir <- paste0('figures/model_output/performance/',model_name,'/scatter/')
 if(!dir.exists(fig_dir)) dir.create(fig_dir)
 
-performance_summary <- read_csv(paste0('data/models/performance/',model_name,'_summary.csv'))
-predictions <- read_csv(paste0('data/models/performance/',model_name,'_predictions.csv'))
+performance_summary <- read_csv(paste0('data/models/value_models/performance/',model_name,'_summary.csv'))
+predictions <- read_csv(paste0('data/models/value_models/performance/',model_name,'_predictions.csv'))
 
 metrics_sel = performance_summary$var
 

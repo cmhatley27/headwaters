@@ -22,10 +22,12 @@ for(i in 1:length(windows)){
   trends <- select(metrics, !c(wateryear)) %>%
     group_by(site_no, var) %>%
     summarise(across(val, ~trendinator(.x, length_thresh = thresh), .unpack = '{inner}')) %>%
-    mutate(across(c(sen, tau), ~trend_classifier(.x, p, alpha = a), .names = '{.col}_sig'),
-           across(c(sen, tau), ~trend_classifier(.x, p, alpha = a*2), .names = '{.col}_sig2a'),
-           across(c(sen, tau), ~trend_classifier(.x, p0, alpha = a), .names = '{.col}_sig0'))
-    
+    mutate(sig_0 = trend_classifier(sen, p0, alpha = a),
+           sig_ar = trend_classifier(sen, p, alpha = a),
+           sig_ar2a = trend_classifier(sen, p, alpha = 2*a),
+           sig_arfdr = trend_classifier(sen, p, alpha = get_fdr_p(p, fdr_a = 2*a)), #FDR alpha recommended as 2*a
+           sig_arfdr2a= trend_classifier(sen, p, alpha = get_fdr_p(p, fdr_a = 4*a)))
+ 
   #save
   write_csv(trends, paste0('./data/gages/metrics/trends/metrics_trends_window',window_size,'.csv'))
 }

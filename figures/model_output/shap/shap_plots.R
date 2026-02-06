@@ -3,9 +3,10 @@ library(tidyverse)
 library(ggbeeswarm)
 source('scripts/functions/utilities.R')
 source('scripts/Theme+Settings.R')
+source('scripts/functions/load_gages.R')
 options(scipen = 999) #disable scientific notation
 
-model_name <- 'hw_order2_senval'
+model_name <- 'all_mean'
 performance_metric = 'r2'
 
 beeswarm_nvars <- 20
@@ -15,39 +16,42 @@ hw_comp <- NA#'hw_senval' #set to NA if no comparison needed
 mod_dir <- paste0('figures/model_output/shap/',model_name,'/')
 dir.create(mod_dir, showWarnings = F)
 
-performance_summary <- read_csv(paste0('data/models/performance/',model_name,'_summary.csv')) %>%
+performance_summary <- read_csv(paste0('data/models/value_models/performance/',model_name,'_summary.csv')) %>%
   select(var, all_of(performance_metric)) %>% rename(performance = 2)
-shaps <- read_csv(paste0('data/models/shaps/',model_name,'_shaps.csv'))
+performance_split <- read_csv(paste0('data/models/value_models/performance/',model_name,'_predictions.csv')) %>%
+  mutate(set = ifelse(site_no %in% hw_gage_info$site_no, 'headwater', 'downstream')) %>%
+  group_by(var, set) %>%
+  summarise(r2 = r2(pred, obs))
+performance_region <- read_csv(paste0('data/models/value_models/performance/',model_name,'_predictions.csv')) %>%
+  mutate(set = ifelse(site_no %in% hw_gage_info$site_no, 'headwater', 'downstream')) %>%
+  left_join(., select(all_gage_info, site_no, region2)) %>%
+  mutate(region = region_recoder(region2)) %>%
+  group_by(var, region, set) %>%
+  summarise(r2 = r2(pred, obs))
 
-global_dat <- shaps %>%
-  filter(type == 'shap') %>%
-  select(!c(site_no, type)) %>%
-  pivot_longer(!metric, names_to = 'var', values_to = 'shap')
+shaps <- read_csv(paste0('data/models/value_models/shaps/',model_name,'_shaps.csv')) %>%
+  mutate(set = ifelse(site_no %in% hw_gage_info$site_no, 'headwater', 'downstream')) %>%
+  pivot_longer(!c(metric, site_no, type, set), names_to = 'var', values_to = 'val') %>%
+  pivot_wider(id_cols = c(metric, site_no, var, set), names_from = type, values_from = val) %>%
+  left_join(select(all_gage_info, site_no, region2)) %>%
+  mutate(region = region_recoder(region2))
 
-local_dat <- shaps %>%
-  pivot_longer(!c(metric, site_no, type), names_to = 'var', values_to = 'val') %>%
-  pivot_wider(id_cols = c(metric, site_no, var), names_from = type, values_from = val)
+metrics_sel = unique(shaps$metric)
+metric_labels <- metric_labeller(metrics_sel)
 
-metrics_sel = performance_summary$var
-metric_labels <- c('Mean Annual Q', 'Q5', 'Q95', 'Runoff Ratio',
-                   '# High-Flow Peaks', '# No-Flow Periods',
-                   'High-Flow Duration', 'No-Flow Duration',
-                   'Half-Flow Date', 'Half-Flow Interval', 'Peak Q Date',
-                   'Baseflow Index', 'Flashiness Index', 'FDC Mid-Section Slope',
-                   'Recession Constant', 'Recession Seasonality')
-
-vars_sel = unique(local_dat$var)
+vars_sel = unique(shaps$var)
 
 # global importance -------------------------------------------------------
 fig_dir <- paste0(mod_dir,'global_importance/')
 dir.create(fig_dir, showWarnings = F)
 dir.create(paste0(fig_dir,'trim/'), showWarnings = F)
+dir.create(paste0(fig_dir,'split/'), showWarnings = F)
 
 for(i in 1:length(metrics_sel)){
  metric_sel =  metrics_sel[i]
  metric_label = metric_labels[i]
  
- plot_dat <- filter(global_dat, metric == metric_sel) %>%
+ plot_dat <- filter(shaps, metric == metric_sel) %>%
    mutate(shap = abs(shap)) %>%
    group_by(var) %>%
    summarise(shap = mean(shap)) %>%
@@ -75,6 +79,43 @@ for(i in 1:length(metrics_sel)){
                   performance_metric,' = ',performance_summary$performance[performance_summary$var == metric_sel])) +
    theme(text = element_text(size = 14))
  ggsave(paste0(fig_dir,'trim/',metric_sel,'.png'), height = 4, width = 5)
+ 
+ #hw-ds split
+ split_dat <- filter(shaps, metric == metric_sel) %>%
+   mutate(shap = abs(shap)) %>%
+   group_by(var, set) %>%
+   summarise(shap = mean(shap)) %>%
+   arrange(desc(shap)) %>%
+   group_by(set) %>%
+   mutate(shap_rank = rank(rev(shap)))
+ hw_dat <- filter(split_dat, set == 'headwater') %>%
+   mutate(var = fct_reorder(var, shap))
+ ds_dat <- filter(split_dat, set == 'downstream') %>%
+   mutate(var = fct_reorder(var, shap))
+ 
+ hw <- ggplot(subset(hw_dat, shap_rank <= 10), aes(x = shap, y = var)) +
+   geom_col() +
+   xlab('Mean Abs SHAP') +
+   ylab(NULL) +
+   scale_y_discrete(labels = pred_labeller) +
+   ggtitle(paste0(metric_label,', Headwater R2 = ',round(
+     performance_region$r2[performance_split$var == metric_sel & performance_split$set == 'headwater'], 3
+     ))) +
+   theme(text = element_text(size = 12))
+ hw
+ ggsave(paste0(fig_dir,'split/',metric_sel,'_hw.png'), hw, height = 4, width = 5)
+ 
+ ds <- ggplot(subset(ds_dat, shap_rank <= 10), aes(x = shap, y = var)) +
+   geom_col() +
+   xlab('Mean Abs SHAP') +
+   ylab(NULL) +
+   scale_y_discrete(labels = pred_labeller) +
+   ggtitle(paste0(metric_label,', Downstream R2 = ',round(
+     performance_region$r2[performance_split$var == metric_sel & performance_split$set == 'downstream'], 3
+   ))) +
+   theme(text = element_text(size = 12))
+ ds
+ ggsave(paste0(fig_dir,'split/',metric_sel,'_ds.png'), ds, height = 4, width = 5)
 }
 
 
@@ -88,7 +129,7 @@ for(i in 1:length(metrics_sel)){
   dir.create(metric_dir, showWarnings = F)
   metric_label = metric_labels[i]
   
-  global_importance <- filter(global_dat, metric == metric_sel) %>%
+  global_importance <- filter(shaps, metric == metric_sel) %>%
     mutate(shap = abs(shap)) %>%
     group_by(var) %>%
     summarise(shap = round(mean(shap), 6)) %>%
@@ -96,14 +137,15 @@ for(i in 1:length(metrics_sel)){
     mutate(var = fct_reorder(var, shap))
   
   #all vars
-  plot_dat <- filter(local_dat, metric == metric_sel) %>%
+  plot_dat <- filter(shaps, metric == metric_sel) %>%
     mutate(var = factor(var, levels = rev(levels(global_importance$var))))
-  ggplot(plot_dat, aes(x = obs, y = shap)) +
+  ggplot(plot_dat, aes(x = obs, y = shap, color = set)) +
     geom_hline(yintercept = 0, linetype = 'dashed') +
     geom_point() +
     xlab('Feature Value') +
     ylab('SHAP') +
     facet_wrap(vars(var), scales = 'free_x') +
+    scale_color_discrete(name = NULL, labels = c('Downstream', 'Headwater')) +
     ggtitle(paste0(metric_label,', ',
                    performance_metric,' = ',performance_summary$performance[performance_summary$var == metric_sel]))
   ggsave(paste0(metric_dir,'0_all.png'), height = 9, width = 14, units = 'in')
@@ -113,13 +155,13 @@ for(i in 1:length(metrics_sel)){
     var_sel <- vars_sel[j]
     var_label <- pred_labeller(var_sel)
     
-    plot_dat <- filter(local_dat, metric == metric_sel & var == var_sel)
-    
-    ggplot(plot_dat, aes(x = obs, y = shap)) +
+    plot_dat <- filter(shaps, metric == metric_sel & var == var_sel)
+    ggplot(plot_dat, aes(x = obs, y = shap, color = set)) +
       geom_hline(yintercept = 0, linetype = 'dashed') +
       geom_point() +
       xlab('Feature Value') +
       ylab('SHAP') +
+      scale_color_discrete(name = NULL, labels = c('Downstream', 'Headwater')) +
       ggtitle(paste0('Metric = ',metric_label,', ',
                      'Feature = ',var_label,', ',
                      'Global SHAP = ',global_importance$shap[global_importance$var == var_sel]))

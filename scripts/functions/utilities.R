@@ -5,13 +5,18 @@ require(modifiedmk)
 #negate %in%
 `%nin%` <- negate(`%in%`)
 
-#read info for selected gages. Headwaters selected in script 2_subset_headwaters,
-#downstream gages and headwater-downstream connections selected in script 3_select_downstream_gages
+#read info for selected gages. Headwaters selected in script a_GageSelection_2,
+#downstream gages and headwater-downstream connections selected in script a_GageSelection_3,
+#matched downstream gages selected in script a_GageSelection_4,
+#all gage info compiled in a_GageSelection_5
 read_gage_info <- function(type = 'headwaters'){
   #type = c('headwaters', 'downstream', 'connections)
   files <- c('headwaters' = 'hw_gage_info.csv',
              'downstream' = 'ds_gage_info.csv',
-             'connections' = 'hw_ds_connections.csv')
+             'connections' = 'hw_ds_connections.csv',
+             'matches' = 'hw_ds_matches.csv',
+             'downstream_matched' = 'ds_matched_gage_info.csv',
+             'all' = 'all_gage_info.csv')
   
   info_path <- file.path('data', 'gages', files[names(files) == type])
   
@@ -67,6 +72,16 @@ trend_classifier <- function(x, p, alpha = 0.05){
     x == 0 ~ 'none',
     .default = NA)
   return(classes)
+}
+
+#false discovery rate for multiple hypothesis testing
+#Wilks 2016
+get_fdr_p <- function(p, fdr_a = 0.1){
+  p = p[!is.na(p)]
+  p_rank = sort(p)
+  thresh = (1:length(p))/length(p)*fdr_a
+  fdr_p = max(p_rank[p_rank <= thresh])
+  return(fdr_p)
 }
 
 #classifier performance metrics
@@ -141,7 +156,7 @@ regress_performance <- function(pred, obs, wide = F){
 }
 
 #holds all metric names for plot labelling
-metric_labeller <- function(metrics, label_thresholds = F){
+metric_labeller <- function(metrics){
   labels <- c(
     'Mean Annual Q' = 'Q_mean',
     'Mean Jan Q' = 'Q_mean_monthly_1',
@@ -216,6 +231,10 @@ pred_labeller <- function(preds){
     'Precip (annual)' = 'precip_annual',
     'Temp (annual)' = 'temp_annual',
     'ETo (annual)' = 'pet_annual',
+    'Previous Precip' = 'precip_annual_prev',
+    'Previous Temp' = 'temp_annual_prev',
+    'Previous ETo' = 'pet_annual_prev',
+    'P/ETo (annual)' = 'ppet_annual',
     'Precip (winter)' = 'precip_jfm',
     'Temp (winter)' = 'temp_jfm',
     'ETo (winter)' = 'pet_jfm',
@@ -232,6 +251,7 @@ pred_labeller <- function(preds){
     'Temp (fall)' = 'temp_ond',
     'ETo (fall)' = 'pet_ond',
     'P/ETo (fall)' = 'ppet_ond',
+    'Precip Seasonality' = 'si',
     'SWE Max' = 'max_swe',
     'SWE Max Day' = 'max_swe_day',
     'SWE Annual Total' = 'swe_annual',
@@ -242,6 +262,9 @@ pred_labeller <- function(preds){
     '% Developed' = 'developed',
     '% Forest' = 'forest',
     '% Grassland' = 'grass',
+    '% Water' = 'water',
+    '% Barren' = 'barren',
+    '% Tile Drainage' = 'tile_pct',
     'Water Use' = 'water_use',
     'Drainage Area' = 'drainage_area',
     'Mean Elevation' = 'elev',
@@ -254,6 +277,7 @@ pred_labeller <- function(preds){
     'Mean Precip' = 'precip_mean',
     'Mean Temp' = 'temp_mean',
     'Mean ETo' = 'pet_mean',
+    'Mean Precip Seasonality' = 'si_mean',
     'Mean Q' = 'q_norm_mean',
     'Mean Water Use' = 'water_use_mean'
   )
@@ -261,3 +285,47 @@ pred_labeller <- function(preds){
   labels_sel <- names(labels)[match_order]
   return(labels_sel)
 }
+
+region_recoder <- function(eco2){
+  recodes <- c('nf' = 5.2,
+               'nf' = 5.3,
+               'mw' = 6.2,
+               'mw' = 7.1,
+               'ef' = 8.1,
+               'cp' = 8.2,
+               'ef' = 8.3,
+               'ap' = 8.4,
+               'ef' = 8.5,
+               'gp' = 9.2,
+               'gp' = 9.3,
+               'gp' = 9.4,
+               'gp' = 9.5,
+               'sw' = 10.1,
+               'sw' = 10.2,
+               'sw' = 11.1,
+               'sw' = 12.1,
+               'sw' = 13.1)
+  match_order <- match(eco2, recodes)
+  recode <- names(recodes)[match_order]
+  return(recode)
+}
+
+#Sam Zipper's ggplot theme
+theme_LJS <- function(...){
+  theme_bw(base_size=10)+
+    theme(
+      text=element_text(color='black'),
+      plot.title=element_text(face="bold", size=rel(1)),
+      #axis.title=element_text(face="bold", size=rel(1)),
+      axis.text=element_text(size=rel(1)),
+      strip.text=element_text(size=rel(1)),
+      legend.title=element_text(size=rel(1)),
+      legend.text=element_text(size=rel(0.9)),
+      legend.position = 'right',
+      panel.grid=element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.margin=unit(c(1,1,1,1), "mm"),
+      strip.background=element_blank())
+}
+theme_set(theme_LJS())

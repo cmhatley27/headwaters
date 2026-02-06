@@ -7,7 +7,8 @@ source('scripts/functions/utilities.R')
 
 hw_gage_info <- read_gage_info(type = 'headwaters')
 ds_gage_info <- read_gage_info(type = 'downstream')
-gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no))
+ds_match_gage_info <- read_gage_info('downstream_matched')
+gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no, ds_match_gage_info$site_no))
 
 
 # load watershed boundaries -----------------------------------------------

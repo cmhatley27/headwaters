@@ -1,11 +1,9 @@
 # load libraries and data -------------------------------------------------
 library(tidyverse)
 source('scripts/functions/utilities.R')
+source('scripts/functions/load_gages.R')
 
-hw_gage_info <- read_gage_info(type = 'headwaters')
-ds_gage_info <- read_gage_info(type = 'downstream')
-gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no))
-
+gage_list <- all_gage_info$site_no
 
 # calculate climate predictors --------------------------------------------
 #annual
@@ -16,9 +14,9 @@ for(i in 1:length(gage_list)){
   annual_climate_preds <- gage_dat %>%
     mutate(wateryear = ifelse(month(date) >= 10, year(date) + 1, year(date))) %>%
     group_by(wateryear) %>%
-    summarise(precip_annual = sum(precip, na.rm = T),
-              pet_annual = sum(pet, na.rm = T),
-              temp_annual = mean(temp, na.rm = T),
+    summarise(precip_annual = sum(precip, na.rm = F),
+              pet_annual = sum(pet, na.rm = F),
+              temp_annual = mean(temp, na.rm = F),
               ppet_annual = precip_annual/pet_annual) %>%
     mutate(across(ends_with('annual'), ~lag(.x), .names = '{.col}_prev'),
            site_no = gage_sel)
@@ -33,17 +31,30 @@ for(i in 1:length(gage_list)){
              month %in% 7:9 ~ 'jas'
            )) %>%
     group_by(wateryear, season) %>%
-    summarise(precip = sum(precip, na.rm = T),
-              pet = sum(pet, na.rm = T),
-              temp = mean(temp, na.rm = T),
+    summarise(precip = sum(precip, na.rm = F),
+              pet = sum(pet, na.rm = F),
+              temp = mean(temp, na.rm = F),
               ppet = precip/pet) %>%
     pivot_wider(names_from = season, values_from = !c(wateryear,season)) %>%
     ungroup() %>%
     mutate(across(!wateryear, ~lag(.x), .names = '{.col}_prev'),
            site_no = gage_sel)
   
+  precip_seasonality <- gage_dat %>%
+    mutate(wateryear = ifelse(month(date) >= 10, year(date) + 1, year(date)),
+           month = month(date)) %>%
+    group_by(wateryear, month) %>%
+    summarise(precip = sum(precip, na.rm = T)) %>%
+    group_by(wateryear) %>%
+    mutate(annual_precip = sum(precip),
+           si_component = abs(precip-annual_precip/12)) %>%
+    summarise(si = sum(si_component)/sum(precip))
+    
+  
   climate_preds <- left_join(annual_climate_preds, seasonal_climate_preds) %>%
+    left_join(precip_seasonality) %>%
     select(site_no, wateryear, everything())
+  
   
   write_csv(climate_preds, paste0('data/gages/predictors/climate/',gage_sel,'.csv'))
   print(paste0('gage ',i,'/',length(gage_list),' done!'))
@@ -65,6 +76,7 @@ for(i in 1:length(gage_list)){
               zero_swe_date = date[swe == 0 & date > max_swe_date][1],
               zero_swe_day = yday(zero_swe_date),
               swe_annual = sum(swe_diff[swe_diff > 0], na.rm = T),
+              #SWE persistence: percent of days with non-zero SWE
               swe_persistence = sum(swe > 0)/length(swe)) %>%
     mutate(max_swe_day = case_when(year(max_swe_date) == wateryear ~ max_swe_day + 92,
                                    leap_year(max_swe_date) ~ max_swe_day - 274,
