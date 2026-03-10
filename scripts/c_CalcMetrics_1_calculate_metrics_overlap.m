@@ -16,7 +16,7 @@ thresholds_low = [0.75 0.67 0.5 0.33 0.25];
 
 plot_results = false; % option to display plots. set to false unless working with a small number of sites/metrics
 
-window_size = 3; % number of years to include in moving window
+window_size = 1; % number of years to include in moving window
 
 for file = 1:length(files)
     %read gage data with gage number as string

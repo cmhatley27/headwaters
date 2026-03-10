@@ -9,20 +9,27 @@ print(paste('CPUs assigned by SLURM:',slurm_cores))
 plan(multicore, workers = slurm_cores)
 print(paste('Using',availableCores('multicore'),'cores'))
 
+metrics_sel <- Sys.getenv('metrics_sel')
+region_sel <- Sys.getenv('region_sel')
+window_length <- as.numeric(Sys.getenv('window_length'))
+shap_method <- Sys.getenv('shap_method')
+model_name <- Sys.getenv('model_name')
+
 all_gage_info <- read_csv('input_data/all_gage_info.csv')
-metrics <- read_csv('input_data/metrics_window3.csv') %>%
+metrics <- read_csv(paste0('input_data/metrics_window',window_length,'.csv')) %>%
   select(!contains('error_str'))
-preds_temporal <- read_csv('input_data/pred_timeseries.csv') 
+preds_temporal <- read_csv(paste0('input_data/pred_timeseries_window',window_length,'.csv')) 
 preds_static <- read_csv('input_data/pred_statics.csv') %>%
   pivot_wider(id_cols = site_no, names_from = var, values_from = val)
 
-metrics_sel <- Sys.getenv('metrics_sel')
-region_sel <- Sys.getenv('region_sel')
 
 print(paste('Starting model for metric:',metrics_sel))
 print(paste('in region:',region_sel))
+print(paste('with moving window length:',window_length))
+print(paste('and SHAP method:',shap_method))
+print(paste('Model name:',model_name))
 
-model_name <- paste0(tolower(metrics_sel), '_annual')
+
 if(!dir.exists(paste0('output/',model_name))) dir.create(paste0('output/',model_name))
 if(!dir.exists(paste0('output/',model_name,'/intermediate'))) dir.create(paste0('output/',model_name,'/intermediate'))
 if(!dir.exists(paste0('output/',model_name,'/shaps'))) dir.create(paste0('output/',model_name,'/shaps'))
@@ -83,7 +90,7 @@ predictions <- obs_info %>%
   mutate(var = metrics_sel,
          obs = dat_in$obs,
          pred = rf$predictions)
-write_csv(predictions, paste0('output/',model_name,'/predictions.csv'))
+write_csv(predictions, paste0('output/',model_name,'/predictions_raw.csv'))
 
 #regression performance metrics
 r2 <- function(pred, obs){
@@ -136,8 +143,8 @@ for(s in seq_along(sites_sel)){
     print(paste0('Skipping site #',site_sel,' since it has already been run'))
     next
   } else
-  print(paste0('Starting site #',site_sel))
-  print(Sys.time())
+  print(paste0('Starting site #',site_sel,'at',Sys.time()))
+  
   
   explain_dat <- filter(dat, site_no == site_sel) %>%
     select(!c(site_no, wateryear, all_of(metrics_sel)))
@@ -147,7 +154,7 @@ for(s in seq_along(sites_sel)){
   shap <- explain(model = rf,
                   x_explain = explain_dat,
                   x_train = select(dat, !c(site_no, wateryear, all_of(metrics_sel))),
-                  approach = 'empirical',
+                  approach = shap_method,
                   phi0 = mean(dat[[metrics_sel]]),
                   iterative = T,
                   max_n_coalitions = 1000,
@@ -169,6 +176,6 @@ for(s in seq_along(sites_sel)){
   write_csv(timing, paste0('output/',model_name,'/timing/',site_sel,'.csv'))
   write_csv(mse, paste0('output/',model_name,'/mse/',site_sel,'.csv'))
   
-  print(paste0('SITE ',s,'/',length(sites_sel),' DONE!!!!!!!!!!!'))
-  print(Sys.time())
+  print(paste('Site',site_sel,'done at',Sys.time()))
+  print(paste0('(',s,'/',length(sites_sel),')'))
 }

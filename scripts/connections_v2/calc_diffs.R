@@ -7,7 +7,6 @@ set_name <- 'order123_hw_diffs_set1'
 
 #select which gages to calculate difference metrics for
 hw_gage_info <- read_gage_info()
-connections <- read_gage_info('connections')
 goi <- hw_gage_info$site_no[hw_gage_info$order %in% 1:3]
 
 #load gagesii

@@ -4,7 +4,7 @@ source('./scripts/Theme+Settings.R')
 all_gages <- read_csv('./data/gagesii/all_gages_summary.csv')
 
 # Filter gagesii by selected criteria -------------------------------------
-save = T #save filtered gage list as csv? will overwrite previous one.
+save = F #save filtered gage list as csv? will overwrite previous one.
 
 ## Stream Order
 stream_orders_sel <- 1:3
@@ -53,7 +53,7 @@ gages_sf <- fil_gages %>%
 ggplot() +
   geom_sf(data = states) +
   geom_sf(data = gages_sf) +
-  ggtitle(paste0('n = ',nrow(gages_sf),' filtered gages'))
+  ggtitle(paste0('n = ',nrow(gages_sf),' filtered low-order gages'))
 
 # Explore filter values ---------------------------------------------------
 # plots and stuff to help in selecting appropriate filter values

@@ -1,3 +1,15 @@
+labelinator <- function(x, labels = metric_labels){
+  match_order <- match(x, labels)
+  labels_sel <- names(labels)[match_order]
+  return(labels_sel)
+}
+
+inv_labelinator <- function(x, labels = metric_labels){
+  match_order <- match(x, names(labels))
+  vars_sel <- unname(labels[match_order])
+  return(vars_sel)
+}
+
 metric_labels <- c(
   'Mean Annual Q' = 'Q_mean',
   'Mean Jan Q' = 'Q_mean_monthly_1',
@@ -67,6 +79,9 @@ pred_labels <- c(
   'Temp (annual)' = 'temp_annual',
   'ETo (annual)' = 'pet_annual',
   'P/ETo (annual)' = 'ppet_annual',
+  'Previous Precip' = 'precip_annual_prev',
+  'Previous Temp' = 'temp_annual_prev',
+  'Previous ETo' = 'pet_annual_prev',
   'Precip (winter)' = 'precip_jfm',
   'Temp (winter)' = 'temp_jfm',
   'ETo (winter)' = 'pet_jfm',
@@ -96,6 +111,7 @@ pred_labels <- c(
   '% Grassland' = 'grass',
   '% Water' = 'water',
   '% Barren' = 'barren',
+  '% Tile Drainage' = 'tile_pct',
   'Water Use' = 'water_use',
   'Drainage Area' = 'drainage_area',
   'Mean Elevation' = 'elev',
@@ -113,8 +129,67 @@ pred_labels <- c(
   'Mean Water Use' = 'water_use_mean'
 )
 
-labelinator <- function(x, labels = metric_labels){
-  match_order <- match(x, labels)
-  labels_sel <- names(labels)[match_order]
-  return(labels_sel)
-}
+pred_cats <- c(
+  'Precip' = 'precip_annual',
+  'Temp' = 'temp_annual',
+  'ETo' = 'pet_annual',
+  'P/ETo' = 'ppet_annual',
+  'Precip' = 'precip_annual_prev',
+  'Temp' = 'temp_annual_prev',
+  'ETo' = 'pet_annual_prev',
+  'Precip' = 'precip_jfm',
+  'Temp' = 'temp_jfm',
+  'ETo' = 'pet_jfm',
+  'P/ETo' = 'ppet_jfm',
+  'Precip' = 'precip_amj',
+  'Temp' = 'temp_amj',
+  'ETo' = 'pet_amj',
+  'P/ETo' = 'ppet_amj',
+  'Precip' = 'precip_jas',
+  'Temp' = 'temp_jas',
+  'ETo' = 'pet_jas',
+  'P/ETo' = 'ppet_jas',
+  'Precip' = 'precip_ond',
+  'Temp' = 'temp_ond',
+  'ETo' = 'pet_ond',
+  'P/ETo' = 'ppet_ond',
+  'Precip' = 'si',
+  'Snow' = 'max_swe',
+  'Snow' = 'max_swe_day',
+  'Snow' = 'swe_annual',
+  'Snow' = 'swe_persistence',
+  'Snow' = 'zero_swe_day',
+  'Snow' = 'melt_duration',
+  'Land Cover' = 'ag',
+  'Land Cover' = 'developed',
+  'Land Cover' = 'forest',
+  'Land Cover' = 'grass',
+  'Land Cover' = 'water',
+  'Land Cover' = 'barren',
+  'Hydro Mod.' = 'tile_pct',
+  'Hydro Mod.' = 'water_use',
+  'Topography' = 'drainage_area',
+  'Topography' = 'elev',
+  'Topography' = 'slope',
+  'Topography' = 'twi',
+  'Geology/Soil' = 'soil_perm',
+  'Geology/Soil' = 'soil_awc',
+  'Hydro Mod.' = 'dist_index',
+  'Geology/Soil' = 'age',
+  'Precip' = 'precip_mean',
+  'Temp' = 'temp_mean',
+  'ETo' = 'pet_mean',
+  'Precip' = 'si_mean',
+  'Mean Q' = 'q_norm_mean',
+  'Hydro Mod.' = 'water_use_mean'
+)
+
+pred_cat_colors <- c(
+  'Precip' = '#377EB8',
+  'ETo' = '#E41A1C',
+  'Snow' = '#984EA3',
+  'Land Cover' = '#4DAF4A',
+  'Hydro Mod.' = '#FF7F00',
+  'Topography' = '#FFFF33',
+  'Geology/Soil' = '#A65628'
+)

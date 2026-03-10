@@ -4,9 +4,12 @@
 .Ruserdata
 data/
 docs/
+writing/
 zipper2021/
-scripts/matlb_reference/
 scripts/connections_v2/*.csv
+input_data/
+output/
 *.png
 *.svg
 *.tif
+app.R

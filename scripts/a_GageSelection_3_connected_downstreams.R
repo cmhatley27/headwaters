@@ -41,7 +41,7 @@ connections <- read_csv('data/gagesii/all_gagesii_connections.csv') %>%
 #exactly the same way as those for the headwaters set. Instead of filtering for
 #stream order here though, we instead filter for the drainage ratio between the
 #headwater and downstream site so they are still of somewhat comparable size.
-save = T #save filtered gage and connections list as csv? Will overwrite previous
+save = F #save filtered gage and connections list as csv? Will overwrite previous
 
 min_drainage_ratio <- 0.05
 
@@ -112,7 +112,7 @@ ggplot() +
   geom_sf(data = ds_gages_sf, color = 'blue', shape = 3) +
   geom_sf(data = subset(hw_gages_sf, site_no %in% hw_ds_connections$headwater_id)) +
   ggtitle(paste0('n = ',nrow(subset(hw_gages_sf, site_no %in% hw_ds_connections$headwater_id)),
-                 ' headwater gages (black) with connections to downstream gages (blue)'))
+                 ' low-order gages (black) with connections to downstream gages (blue)'))
 
 
 # Explore filter values ---------------------------------------------------

@@ -23,12 +23,12 @@ plot_dat <- all_gage_info %>%
          site_no %in% connections$headwater_id,
          order <= 3)
 ggplot() +
-  geom_sf(data = states, linewidth = 0.5) +
-  geom_sf(data = plot_dat, size = 2) +
+  geom_sf(data = states) +
+  geom_sf(data = plot_dat, size = 1) +
   theme(axis.text = element_blank(), axis.ticks = element_blank(),
         legend.position = 'none') +
-  ggtitle(paste0('Headwater gages with downstream connection, n = ', nrow(plot_dat)))
-ggsave('figures/site_maps/conus_maps/headwaters_w_connection.png', height = 5, width = 8, units = 'in', dpi = 500)
+  ggtitle(paste0('Upstream-downstream connections; n = ', nrow(connections)))
+ggsave('figures/site_maps/conus_maps/connections.png', height = 4, width = 6.4, units = 'in', dpi = 500)
 table(table(all_connection_info$headwater_id))
 
 # all --------------------------------------------------------------------

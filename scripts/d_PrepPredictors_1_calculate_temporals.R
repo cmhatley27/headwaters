@@ -112,4 +112,10 @@ merge <- left_join(climate, swe) %>%
   left_join(., lc, join_by(site_no, wateryear == year)) %>%
   left_join(., wuse, join_by(site_no, wateryear == year))
 
-write_csv(merge, 'data/gages/predictors/pred_timeseries.csv')
+merge_window3 <- merge %>%
+  group_by(site_no) %>%
+  mutate(across(!c(wateryear, water_use), ~rollmean(.x, 3, align = 'left', fill = NA))) %>%
+  filter(wateryear %nin% c(2022,2023))
+
+write_csv(merge, 'data/gages/predictors/pred_timeseries_window1.csv')
+write_csv(merge_window3, 'data/gages/predictors/pred_timeseries_window3.csv')

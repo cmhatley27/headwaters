@@ -2,13 +2,13 @@ library(tidyverse)
 library(dataRetrieval)
 library(sf)
 library(nhdplusTools)
-source('scripts/functions/Theme+Settings.R')
-source('scripts/functions/read_gages.R')
-source('scripts/functions/read_spatial.R')
+source('scripts/Theme+Settings.R')
+source('scripts/functions/utilities.R')
+source('scripts/functions/load_gages.R')
 
 # get upstream flowlines ------------------------------------------------
 upstream_flowlines <- data.frame(
-  site_no = 'xxx', #feed in USGS gage ids
+  site_no = '06892350', #feed in USGS gage ids
   geometry = NA
 )
 for(gage in 1:nrow(upstream_flowlines)){
@@ -39,6 +39,8 @@ for(gage in 1:nrow(upstream_flowlines)){
 upstream_flowlines_sf <- st_as_sf(upstream_flowlines)
 st_crs(upstream_flowlines_sf) <- 4269
 
+ggplot() +
+  geom_sf(data = upstream_flowlines_sf)
 
 # save output -------------------------------------------------------------
 

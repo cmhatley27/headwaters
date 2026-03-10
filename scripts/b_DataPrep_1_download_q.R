@@ -9,7 +9,7 @@ end_year <- 2023
 start_date_sel <- paste0(start_year,'-10-01')
 end_date_sel <- paste0(end_year,'-09-30')
 
-hw_gage_info <- read_gage_info(type = 'headwaters')
+hw_gage_info <- read_gage_info(type = 'headwaters') #read_csv('data/gages/hw_gage_info_exp.csv')
 ds_gage_info <- read_gage_info(type = 'downstream')
 ds_match_gage_info <- read_gage_info('downstream_matched')
 gage_list <- unique(c(hw_gage_info$site_no, ds_gage_info$site_no, ds_match_gage_info$site_no))

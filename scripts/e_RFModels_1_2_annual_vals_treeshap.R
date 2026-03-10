@@ -1,6 +1,7 @@
 # libraries and data ------------------------------------------------------
 library(tidyverse)
 library(ranger)
+library(treeshap)
 library(shapr)
 library(future)
 library(progressr)
@@ -12,7 +13,7 @@ print(paste('Using',availableCores('multicore'),'cores'))
 all_gage_info <- read_csv('input_data/all_gage_info.csv')
 metrics <- read_csv('input_data/metrics_window3.csv') %>%
   select(!contains('error_str'))
-preds_temporal <- read_csv('input_data/pred_timeseries.csv') 
+preds_temporal <- read_csv('input_data/pred_timeseries_window3.csv') 
 preds_static <- read_csv('input_data/pred_statics.csv') %>%
   pivot_wider(id_cols = site_no, names_from = var, values_from = val)
 
@@ -22,7 +23,7 @@ region_sel <- Sys.getenv('region_sel')
 print(paste('Starting model for metric:',metrics_sel))
 print(paste('in region:',region_sel))
 
-model_name <- paste0(tolower(metrics_sel), '_annual')
+model_name <- paste0(tolower(metrics_sel), '_annual_treeshap_ind')
 if(!dir.exists(paste0('output/',model_name))) dir.create(paste0('output/',model_name))
 if(!dir.exists(paste0('output/',model_name,'/intermediate'))) dir.create(paste0('output/',model_name,'/intermediate'))
 if(!dir.exists(paste0('output/',model_name,'/shaps'))) dir.create(paste0('output/',model_name,'/shaps'))
@@ -83,7 +84,7 @@ predictions <- obs_info %>%
   mutate(var = metrics_sel,
          obs = dat_in$obs,
          pred = rf$predictions)
-write_csv(predictions, paste0('output/',model_name,'/predictions.csv'))
+write_csv(predictions, paste0('output/',model_name,'/predictions_raw.csv'))
 
 #regression performance metrics
 r2 <- function(pred, obs){
@@ -121,7 +122,7 @@ write_csv(performance, paste0('output/',model_name,'/performance.csv'))
 
 
 # shaps -------------------------------------------------------------------
-require(shapr)
+require(treeshap)
 # progressr::handlers(global=TRUE)
 
 sites_sel <- all_gage_info$site_no
@@ -130,45 +131,34 @@ if(region_sel != 'all'){
 }
 sites_sel <- sites_sel[sites_sel %in% dat$site_no]
 
+explain_dat <- filter(dat, !is.na(.data[[metrics_sel]])) %>%
+  select(all_of(c(metrics_sel, preds_temporal_sel, preds_static_sel))) %>%
+  filter(if_all(everything(), ~!is.na(.x))) %>%
+  rename(obs = 1)
+explain_info <- filter(dat, !is.na(.data[[metrics_sel]])) %>%
+  select(site_no, wateryear, all_of(c(metrics_sel, preds_temporal_sel, preds_static_sel))) %>%
+  filter(if_all(everything(), ~!is.na(.x))) %>%
+  select(site_no, wateryear)
+shap_in <- ranger.unify(rf, explain_dat)
+
 for(s in seq_along(sites_sel)){
-  site_sel = sites_sel[s]
+  site_sel <- sites_sel[s]
+  
   if(file.exists(paste0('output/',model_name,'/shaps/',site_sel,'.csv'))){
     print(paste0('Skipping site #',site_sel,' since it has already been run'))
     next
   } else
-  print(paste0('Starting site #',site_sel))
-  print(Sys.time())
+  print(paste0('Starting site #',site_sel,'at',Sys.time()))
   
-  explain_dat <- filter(dat, site_no == site_sel) %>%
-    select(!c(site_no, wateryear, all_of(metrics_sel)))
-  explain_info <- filter(dat, site_no == site_sel) %>%
-    select(site_no, wateryear)
+  shap <- treeshap(shap_in, explain_dat[explain_info$site_no == site_sel,], interactions = F, verbose = F)
   
-  shap <- explain(model = rf,
-                  x_explain = explain_dat,
-                  x_train = select(dat, !c(site_no, wateryear, all_of(metrics_sel))),
-                  approach = 'empirical',
-                  phi0 = mean(dat[[metrics_sel]]),
-                  iterative = T,
-                  max_n_coalitions = 1000,
-                  n_MC_samples = 250,
-                  seed = 527,
-                  verbose = c('basic'))
-  
-  shaps <- as_tibble(shap$shapley_values_est) %>%
-    mutate(metric = metrics_sel) %>%
-    cbind(explain_info)
-  timing <- as_tibble(shap$timing$main_computation_timing_secs) %>%
+  shap_out <- shap$shaps %>%
     mutate(metric = metrics_sel,
-           site_no = site_sel)
-  mse <- as_tibble(shap$MSEv$MSEv_explicand$MSEv) %>%
-    mutate(metric = metrics_sel) %>%
-    cbind(explain_info)
+           site_no = site_sel,
+           wateryear = explain_info$wateryear[explain_info$site_no == site_sel])
   
-  write_csv(shaps, paste0('output/',model_name,'/shaps/',site_sel,'.csv'))
-  write_csv(timing, paste0('output/',model_name,'/timing/',site_sel,'.csv'))
-  write_csv(mse, paste0('output/',model_name,'/mse/',site_sel,'.csv'))
+  write_csv(shap_out, paste0('output/',model_name,'/shaps/',site_sel,'.csv'))
   
-  print(paste0('SITE ',s,'/',length(sites_sel),' DONE!!!!!!!!!!!'))
-  print(Sys.time())
+  print(paste('Site',site_sel,'done at',Sys.time()))
+  print(paste0('(',s,'/',length(sites_sel),')'))
 }

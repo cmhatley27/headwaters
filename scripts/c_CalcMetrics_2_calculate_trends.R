@@ -4,7 +4,7 @@ source('scripts/functions/utilities.R')
 source('scripts/Theme+Settings.R')
 
 #select which window length metric sets to calculate trends for
-windows <- c(3)
+windows <- c(1)
 
 for(i in 1:length(windows)){
   window_size <- windows[i]
@@ -19,9 +19,10 @@ for(i in 1:length(windows)){
   thresh = 5 #min number of years needed to calculate trend
   
   #calculate trends and then classify them based on direction & significance
-  trends <- select(metrics, !c(wateryear)) %>%
+  trends <- metrics %>%
     group_by(site_no, var) %>%
-    summarise(across(val, ~trendinator(.x, length_thresh = thresh), .unpack = '{inner}')) %>%
+    summarise(across(val, ~trendinator(.x, length_thresh = thresh), .unpack = '{inner}'),
+              int = median(val, na.rm = T)-(sen*median(wateryear, na.rm = T))) %>%
     mutate(sig_0 = trend_classifier(sen, p0, alpha = a),
            sig_ar = trend_classifier(sen, p, alpha = a),
            sig_ar2a = trend_classifier(sen, p, alpha = 2*a),

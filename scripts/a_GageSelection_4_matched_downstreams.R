@@ -3,8 +3,8 @@ library(tidyverse)
 source('scripts/Theme+Settings.R')
 source('scripts/functions/load_states.R')
 source('scripts/functions/utilities.R')
-source('scripts/connections_v2/functions/get_gages_diff.R')
-source('scripts/connections_v2/functions/get_huc8_matches.R')
+source('scripts/functions/get_gages_diff.R')
+source('scripts/functions/get_huc8_matches.R')
 
 all_gages <- read_csv('./data/gagesii/all_gages_summary.csv')
 hw_gage_info <- read_gage_info()
@@ -20,7 +20,7 @@ matching_metrics <- c('ELEV_MEAN_M_BASIN', 'PPTAVG_BASIN', 'T_AVG_BASIN', 'WD_BA
 #the weights vector will be 1 value longer than the columns vector
 weights = c(1,1,1,1,1,1)
 #calculate diffs
-# diffs <- get_gages_diff(goi = hw_gage_info$site_no, 
+# diffs <- get_gages_diff(goi = hw_gage_info$site_no,
 #                         gagesii_cols = matching_metrics,
 #                         weights = weights)
 #or load a previous one
@@ -65,7 +65,7 @@ min_drainage_ratio <- 0.05
 ## Data Availability (max number of missing values within selected period)
 start_year <- 1981
 end_year <- 2023
-max_nas <- 365*5
+max_nas <- 365*37
 #function to calculate number of NA values in selected period using the 'count_nu'
 #column from the NWIS gage info that gives the total number of observations
 #available for each gage.
