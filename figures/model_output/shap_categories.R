@@ -88,10 +88,6 @@ plot_dat <- trends %>%
 st_crs(plot_dat) <- 4326
 plot_dat <- st_transform(plot_dat, 5070)
 
-ggplot() +
-  geom_sf(data = states) +
-  geom_sf(data = subset(plot_dat, region3 %in% 1:4), aes(color = factor(region3)))
-
 #Cateogry MAP
 ggplot() +
   geom_sf(data = states) +
@@ -99,8 +95,9 @@ ggplot() +
           size = 1, fill = NA) +
   scale_color_discrete(limits = names(pred_cat_colors), name = 'Category') +
   # scale_shape_manual(limits = c(T,F), values = c(19,21), guide = NULL) +
-  ggtitle(paste(metric_name,'Category of Top Trend Predictor'))
+  ggtitle(paste(labelinator(metric_sel, metric_labels),'Category of Top Trend Predictor'))
 ggsave(paste0('figures/model_output/',model_name,'/',site_label,'_top_SHAP_trend_map.png'), height = 3, width = 6, units = 'in')
+
 
 #Category BARS
 ggplot(filter(plot_dat, !is.na(p)), aes(x = var1_cat, fill = var1_cat)) +
@@ -110,7 +107,7 @@ ggplot(filter(plot_dat, !is.na(p)), aes(x = var1_cat, fill = var1_cat)) +
   # scale_alpha_manual(limits = c(F,T), labels = c('Non-sig.', 'Sig.'), values = c(0.3, 1), na.value = 0.3, name = 'Metric Trend\nSignificance') +
   xlab('') +
   ylab('# Gages') +
-  ggtitle(paste(metric_name, 'Category of Top Trend Predictor')) +
+  ggtitle(paste(labelinator(metric_sel, metric_labels), 'Category of Top Trend Predictor')) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(paste0('figures/model_output/',model_name,'/',site_label,'_top_SHAP_trend_bars.png'), height = 3, width = 5, units = 'in')
 
@@ -154,9 +151,7 @@ cn_trend_diffs <- left_join(connections, rename(shap_trends, headwater_id = site
   left_join(rename(metric_trends, downstream_id = site_no, down_sen_metric = sen)) %>%
   mutate(sen_diff = up_sen - down_sen,
          sen_metric_diff = up_sen_metric - down_sen_metric,
-         abs_sen_metric_diff = abs(up_sen_metric) - abs(down_sen_metric)) %>%
-  filter(!is.na(sen_diff)) #%>%
-  filter(abs(sen_diff) <= quantile(abs(sen_diff), 0.999))
+         abs_sen_metric_diff = abs(up_sen_metric) - abs(down_sen_metric))
 
 plot_dat <- cn_trend_diffs %>%
   group_by(connection_id, headwater_id) %>%
@@ -172,7 +167,8 @@ plot_dat <- cn_trend_diffs %>%
          var2_name = labelinator(var2, pred_labels),
          var2_cat = factor(labelinator(var2, pred_cats), levels = names(pred_cat_colors))) %>%
   left_join(select(all_gage_info, headwater_id = site_no, lat, lon)) %>%
-  st_as_sf(., coords = c('lon', 'lat'))
+  st_as_sf(., coords = c('lon', 'lat')) %>%
+  filter(!is.na(abs_sen_metric_diff))
 st_crs(plot_dat) <- 4326
 plot_dat <- st_transform(plot_dat,5070)
 
@@ -183,7 +179,7 @@ ggplot(plot_dat, aes(x = var1_cat, fill = var1_cat)) +
   scale_fill_discrete(limits = names(pred_cat_colors), guide = NULL) +
   xlab('') +
   ylab('# Gages') +
-  ggtitle(paste(metric_sel, 'Category of Top \u0394Trend Predictor')) +
+  ggtitle(paste(labelinator(metric_sel, metric_labels), 'Category of Top \u0394Trend Predictor')) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(paste0('figures/model_output/',model_name,'/connection_top_SHAP_trend_diffs_bars.png'), height = 3, width = 5, units = 'in')
 
@@ -193,7 +189,7 @@ ggplot() +
   geom_sf(data = plot_dat, aes(color = var1_cat),
           size = 1) +
   scale_color_discrete(limits = names(pred_cat_colors), name = 'Category') +
-  ggtitle(paste(metric_sel,'Category of Top \u0394Trend Predictor'))
+  ggtitle(paste(labelinator(metric_sel, metric_labels),'Category of Top \u0394Trend Predictor'))
 ggsave(paste0('figures/model_output/',model_name,'/connection_top_SHAP_trend_diffs_map.png'), height = 3, width = 6, units = 'in')
 
 
@@ -203,7 +199,7 @@ ggplot(plot_dat, aes(x = abs_sen_metric_diff, fill = var1_cat)) +
                  bins = 20,
                  boundary = 0) +
   scale_fill_discrete(limits = names(pred_cat_colors), name = 'Category') +
-  xlim(quantile(plot_dat$sen_metric_diff, c(0.01,0.99), na.rm = T)) +
+  xlim(quantile(plot_dat$abs_sen_metric_diff, c(0.01,0.99))) +
   geom_vline(xintercept = 0, linewidth = 0.75) +
   xlab('Sen\'s Slope Difference') +
   ylab('') +

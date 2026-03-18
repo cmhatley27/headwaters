@@ -16,7 +16,10 @@ metrics_sel <- c('Q_mean', 'Q5', 'Q95', 'TotalRR',
                  'HFD_mean', 'HFI_mean', 'peakQ_timing', 
                  'BFI', 'FlashinessIndex', 'FDC_slope',
                  'BaseflowRecessionK', 'Recession_a_Seasonality')
+metrics_sel <- c('Q5', 'Q95', 'HFD_mean', 'FlashinessIndex')
 
+
+# plot pos-neg bars -------------------------------------------------------
 plot_dat <- filter(trends, var %in% metrics_sel, site_no %in% sites_sel) %>%
   group_by(var, sig = sig_ar2a) %>%
   summarise(n = n()) %>%
@@ -25,11 +28,6 @@ plot_dat <- filter(trends, var %in% metrics_sel, site_no %in% sites_sel) %>%
   mutate(n_pct = n/sum(n)) %>%
   mutate(var = factor(var, levels = rev(metrics_sel), labels = labelinator(rev(metrics_sel), metric_labels)),
          sig = factor(sig, levels = c('none', 'pos', 'neg'), labels = c('Non-sig.', 'Positive', 'Negative')))
-  
-
-
-
-# plot pos-neg bars -------------------------------------------------------
 
 ggplot(data = plot_dat, aes(y = var, x = n_pct, fill = sig)) +
   geom_col(color = 'black') +
@@ -41,6 +39,13 @@ ggsave(paste0('figures/metric_trends/sig_bar_stacks/',site_label,'.png'),
        width = 6, height = 5.5, units = 'in')
 
 
+
+# number of sig trends at each gage ---------------------------------------
+plot_dat <- filter(trends, var %in% metrics_sel, site_no %in% sites_sel) %>%
+  group_by(site_no) %>%
+  summarise(n_sig = sum(sig_ar2a != 'none', na.rm = T))
+
+table(plot_dat$n_sig)
 
 # plot connection diff bars -----------------------------------------------
 

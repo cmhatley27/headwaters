@@ -3,7 +3,7 @@ library(tidyverse)
 source('scripts/functions/utilities.R')
 source('scripts/functions/load_gages.R')
 
-metric_sel <- 'Q95'
+metric_sel <- 'Q5'
 
 model_name <- paste0(tolower(metric_sel),'_annual_w3_emp')
 model_dir <- paste0('data/models/',model_name,'/')
@@ -157,7 +157,10 @@ cn_trends <- left_join(connections, select(metric_trends, headwater_id = site_no
   left_join(select(shap_sum_trends, downstream_id = site_no, down_shap_sum = shap_sum)) %>%
   mutate(obs_diff = up_obs - down_obs,
          shap_sum_diff = up_shap_sum - down_shap_sum) %>%
-  filter(!is.na(shap_sum_diff))
+  filter(!is.na(shap_sum_diff)) %>%
+  filter(abs(obs_diff) <= quantile(abs(obs_diff), 0.99, na.rm = T),
+         abs(shap_sum_diff) <= quantile(abs(shap_sum_diff), 0.99, na.rm = T)) 
+  
 
 cn_trend_diffs_r2 <- round(r2(cn_trends$shap_sum_diff, cn_trends$obs_diff), 3)  
 ggplot(cn_trends, aes(x = obs_diff, y = shap_sum_diff)) +
@@ -165,8 +168,6 @@ ggplot(cn_trends, aes(x = obs_diff, y = shap_sum_diff)) +
   geom_vline(xintercept = 0) +
   geom_point() +
   geom_abline(slope = 1) +
-  scale_x_continuous(limits = quantile(cn_trends$obs_diff, c(0.02,0.98))) +
-  scale_y_continuous(limits = quantile(cn_trends$shap_sum_diff, c(0.02,0.98))) +
   ylab('Sum of \u0394SHAP trends') +
   xlab(paste('Observed \u0394',metric_sel, 'trend')) +
   ggtitle(paste(metric_sel,'Sum of \u0394SHAP trends; R2:',cn_trend_diffs_r2))

@@ -4,7 +4,7 @@ source('scripts/functions/utilities.R')
 source('scripts/functions/var_names.R')
 source('scripts/functions/load_gages.R')
 
-metric_sel <- 'Q95'
+metric_sel <- 'FlashinessIndex'
 
 model_name <- paste0(tolower(metric_sel),'_annual_w3_emp')
 model_dir <- paste0('data/models/',model_name,'/')
@@ -14,7 +14,8 @@ model_dir <- paste0('data/models/',model_name,'/')
 #Konza land cover '06879650'
 #KSRB headwaters '06823500'
 #Front range impact of elev '09126000'
-sites_sel <- '06879650'
+#Snow in the desert for Flashiness? '09430600', '09497980'
+sites_sel <- '09497980'
 
 predictions <- read_csv(paste0(model_dir,'predictions.csv')) %>%
   filter(site_no %in% sites_sel)
@@ -106,11 +107,13 @@ ggplot(filter(shaps, var %in% pred_sel), aes(x = val, y = shap, color = wateryea
 
 # connection dual timeseries ----------------------------------------------
 
-metric_sel <- 'Q95'
+metric_sel <- 'FlashinessIndex'
 
-model_name <- paste0(tolower(metric_sel),'_annual')
+model_name <- paste0(tolower(metric_sel),'_annual_w3_emp')
 model_dir <- paste0('data/models/',model_name,'/')
-connection_sel <- 165
+connection_sel <- 169
+
+#flashiness drainage area - 193, 169, 129, 130, 131
 
 sites_sel <- c(connections$headwater_id[connections$connection_id == connection_sel],
                connections$downstream_id[connections$connection_id == connection_sel])
@@ -179,6 +182,7 @@ ggsave(paste0('figures/example_timeseries/',metric_sel,'_connection_',connection
 shap_trend_diffs <- filter(trends, type == 'shap') %>%
   pivot_wider(id_cols = var, names_from = gage, values_from = sen) %>%
   mutate(diff = upstream-downstream,
+         abs_diff = abs(upstream) - abs(downstream),
          var_name = labelinator(var, pred_labels))
 
 ggplot(shap_trend_diffs, aes(x = fct_reorder(var_name, diff, .desc = T), y = diff)) +
@@ -189,5 +193,5 @@ ggplot(shap_trend_diffs, aes(x = fct_reorder(var_name, diff, .desc = T), y = dif
 ggsave(paste0('figures/example_timeseries/',metric_sel,'_connection_',connection_sel,'_allvars_SHAP_trend_diffs.png'),
        height = 5, width = 8, units = 'in')
 sum(shap_trend_diffs$diff)
-trends$sen[trends$type == 'obs' & trends$var == metric_sel & trends$gage == 'upstream'] - trends$sen[trends$type == 'obs' & trends$var == metric_sel & trends$gage == 'downstream']
+(trends$sen[trends$type == 'obs' & trends$var == metric_sel & trends$gage == 'upstream']) - (trends$sen[trends$type == 'obs' & trends$var == metric_sel & trends$gage == 'downstream'])
 

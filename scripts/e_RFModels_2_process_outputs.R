@@ -3,7 +3,7 @@ library(tidyverse)
 source('scripts/functions/utilities.R')
 source('scripts/functions/load_gages.R')
 
-metric_sel <- 'HFD_mean'
+metric_sel <- 'Q5'
 
 model_name <- paste0(tolower(metric_sel),'_annual_w3_emp')
 model_dir <- paste0('data/models/',model_name,'/')

@@ -17,8 +17,9 @@ preds_sel <- c('precip_annual','pet_annual',
                'si',
                'swe_annual','max_swe','max_swe_day', 'zero_swe_day', 'swe_persistence', 'melt_duration',
                'ag','developed','forest','grass')
+preds_sel <- 'ppet_annual'
   
-metric_sel <- 'Q5'
+metric_sel <- 'FlashinessIndex'
 metric_name <- labelinator(metric_sel)
 
 trends <- filter(metric_trends, var == metric_sel) %>%
@@ -47,7 +48,7 @@ ggsave(paste0('figures/metric_trends/cors_with_preds/bars/',metric_sel,'.png'), 
   
   
 
-p <- 'precip_annual'
+p <- 'ppet_annual'
 cor_p <- round(cors[metric_sel,p],3)
 ggplot(trends, aes(x = .data[[p]], y = .data[[metric_sel]])) +
   geom_point() +
