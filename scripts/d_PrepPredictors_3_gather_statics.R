@@ -13,13 +13,15 @@ basin_id <- read_excel(dir_gagesii, sheet = 'BasinID')
 topo <- read_excel(dir_gagesii, sheet = 'Topo')
 soils <- read_excel(dir_gagesii, sheet = 'Soils')
 hydro <- read_excel(dir_gagesii, sheet = 'Hydro')
+dams <- read_excel(dir_gagesii, sheet = 'HydroMod_Dams')
 classif <- read_excel(dir_gagesii, sheet = 'Bas_Classif')
 
 statics <- basin_id %>%
   select(site_no = STAID, drainage_area = DRAIN_SQKM) %>%
   left_join(., select(topo, site_no = STAID, elev = ELEV_MEAN_M_BASIN, slope = SLOPE_PCT)) %>%
-  left_join(., select(soils, site_no = STAID, soil_perm = PERMAVE, soil_awc = AWCAVE)) %>%
+  left_join(., select(soils, site_no = STAID, soil_perm = PERMAVE, soil_awc = AWCAVE, soil_depth = ROCKDEPAVE, gw_depth = WTDEPAVE)) %>%
   left_join(., select(hydro, site_no = STAID, twi = TOPWET)) %>%
+  left_join(., select(dams, site_no = STAID, dam_storage = STOR_NID_2009)) %>%
   left_join(., select(classif, site_no = STAID, dist_index = HYDRO_DISTURB_INDX)) %>%
   filter(site_no %in% gage_list) %>%
   pivot_longer(!site_no, names_to = 'var', values_to = 'val')

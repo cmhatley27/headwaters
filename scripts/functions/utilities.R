@@ -145,6 +145,26 @@ rmse <- function(pred, obs){
   return(rmse)
 }
 
+mae <- function(pred, obs){
+  ae <- abs(pred-obs)
+  mae <- mean(ae)
+  return(mae)
+}
+
+perf_summary <- function(data, lev = NULL, model = NULL){
+  pred = data[,'pred']
+  obs = data[,'obs']
+  
+  rmse <- rmse(pred, obs)
+  mae <- mae(pred, obs)
+  r2 <- r2(pred, obs)
+  kge <- kge(pred, obs)
+  
+  out <- c(rmse, mae, r2, kge)
+  names(out) <- c('RMSE', 'MAE', 'R2', 'KGE')
+  return(out)
+}
+
 #regression performance metrics
 regress_performance <- function(pred, obs, wide = F){
   r2 <- r2(pred, obs)
@@ -183,23 +203,21 @@ region_recoder <- function(eco2){
   recode <- names(recodes)[match_order]
   return(recode)
 }
-
-#Sam Zipper's ggplot theme
-theme_LJS <- function(...){
-  theme_bw(base_size=10)+
+theme_CMH <- function(...){
+  theme_bw(base_size = 8,
+           base_line_size = 0.25) +
     theme(
-      text=element_text(color='black'),
+      legend.text = element_text(size = rel(0.9)),
+      axis.text = element_text(size = rel(0.9)),
       plot.title=element_text(face="bold", size=rel(1)),
-      #axis.title=element_text(face="bold", size=rel(1)),
-      axis.text=element_text(size=rel(1)),
-      strip.text=element_text(size=rel(1)),
-      legend.title=element_text(size=rel(1)),
-      legend.text=element_text(size=rel(0.9)),
-      legend.position = 'right',
       panel.grid=element_blank(),
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       plot.margin=unit(c(1,1,1,1), "mm"),
-      strip.background=element_blank())
+      panel.background = element_rect(fill = fill_alpha('white',0)),
+      plot.background = element_rect(fill = fill_alpha('white',0), color = alpha('white',0)),
+      legend.background = element_rect(fill = fill_alpha('white',0), color = alpha('white',0)),
+      strip.background=element_blank()
+    )
 }
-theme_set(theme_LJS())
+theme_set(theme_CMH())

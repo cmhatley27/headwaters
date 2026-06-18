@@ -3,7 +3,7 @@ library(tidyverse)
 source('scripts/functions/utilities.R')
 source('scripts/functions/load_gages.R')
 
-metric_sel <- 'Q5'
+metric_sel <- 'Q95'
 
 model_name <- paste0(tolower(metric_sel),'_annual_w3_emp')
 model_dir <- paste0('data/models/',model_name,'/')
@@ -140,7 +140,7 @@ ggsave(paste0('figures/model_output/',model_name,'/',site_label,'_modeled_trends
 
 
 
-# Performance of CONNECTION DIFFERENCES -----------------------------------
+# Performance of CONNECTION TREND DIFFERENCES -----------------------------------
 metric_trends <- read_csv(paste0(model_dir,'trends.csv')) %>%
   filter(var == metric_sel, type == 'obs') %>%
   select(site_no, obs=sen)
@@ -174,6 +174,36 @@ ggplot(cn_trends, aes(x = obs_diff, y = shap_sum_diff)) +
 ggsave(paste0('figures/model_output/',model_name,'/connection_shap_sum_trend_diff_performance.png'), height = 4, width = 4, units = 'in')
 
 
+
+# performance of connection SHAP DIFFERENCE trends ------------------------
+predictions <- read_csv(paste0(model_dir,'predictions.csv'))
+shaps <- read_csv(paste0(model_dir,'shaps.csv'))
+
+cn_metrics <- left_join(connections, select(predictions, headwater_id = site_no, wateryear, up_metric = obs)) %>%
+  left_join(select(predictions, downstream_id = site_no, wateryear, down_metric = obs)) %>%
+  mutate(metric_diff = up_metric-down_metric) %>%
+  group_by(connection_id) %>%
+  summarize(across(metric_diff, ~trendinator(.x), .unpack = '{inner}'))
+
+cn_shaps <- left_join(connections, select(shaps, headwater_id = site_no, var, wateryear, up_shap = shap)) %>%
+  left_join(select(shaps, downstream_id = site_no, var, wateryear, down_shap = shap)) %>%
+  mutate(shap_diff = up_shap-down_shap) %>%
+  group_by(connection_id, var) %>%
+  summarize(across(shap_diff, ~trendinator(.x), .unpack = '{inner}'))
+
+cn_shap_diff_trends <- cn_shaps %>%
+  group_by(connection_id) %>%
+  summarise(shap_diff_sen = sum(sen)) %>%
+  left_join(select(cn_metrics, connection_id, metric_diff_sen = sen)) %>%
+  left_join(select(cn_trends, connection_id, metric_sen_diff = obs_diff, shap_sen_diff = shap_sum_diff))
+
+r2(cn_shap_diff_trends$shap_diff_sen, cn_shap_diff_trends$metric_diff_sen)
+r2(cn_shap_diff_trends$shap_sen_diff, cn_shap_diff_trends$metric_sen_diff)
+r2(cn_shap_diff_trends$shap_diff_sen, cn_shap_diff_trends$metric_sen_diff)
+
+ggplot(cn_shap_diff_trends, aes(x = metric_diff_sen, y = metric_sen_diff)) +
+  geom_point() +
+  geom_abline(slope = 1)
 # MSE ---------------------------------------------------------------------
 mses <- read_csv(list.files(paste0(model_dir,'mse/'), full.names = T)) %>%
   rename(mse = value) %>%
